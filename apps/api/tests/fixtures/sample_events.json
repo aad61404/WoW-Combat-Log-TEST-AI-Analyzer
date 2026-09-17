@@ -1,0 +1,236 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "events": {
+          "data": [
+            {
+              "timestamp": 63200,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 1,
+              "abilityGameID": 441452,
+              "fight": 1,
+              "amount": 45000,
+              "hitType": 1,
+              "sourceInstance": 1
+            },
+            {
+              "timestamp": 85400,
+              "type": "begincast",
+              "sourceID": 100,
+              "targetID": null,
+              "abilityGameID": 435136,
+              "fight": 1
+            },
+            {
+              "timestamp": 88900,
+              "type": "cast",
+              "sourceID": 100,
+              "targetID": null,
+              "abilityGameID": 435136,
+              "fight": 1
+            },
+            {
+              "timestamp": 89200,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 3,
+              "abilityGameID": 435136,
+              "fight": 1,
+              "amount": 82000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 89200,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 6,
+              "abilityGameID": 435136,
+              "fight": 1,
+              "amount": 78000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 102500,
+              "type": "applydebuff",
+              "sourceID": 100,
+              "targetID": 4,
+              "abilityGameID": 434803,
+              "fight": 1
+            },
+            {
+              "timestamp": 105500,
+              "type": "applydebuffstack",
+              "sourceID": 100,
+              "targetID": 4,
+              "abilityGameID": 434803,
+              "fight": 1,
+              "stack": 2
+            },
+            {
+              "timestamp": 108500,
+              "type": "applydebuffstack",
+              "sourceID": 100,
+              "targetID": 4,
+              "abilityGameID": 434803,
+              "fight": 1,
+              "stack": 3
+            },
+            {
+              "timestamp": 110000,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 4,
+              "abilityGameID": 434803,
+              "fight": 1,
+              "amount": 120000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 110200,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 4,
+              "abilityGameID": 441452,
+              "fight": 1,
+              "amount": 55000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 110500,
+              "type": "death",
+              "sourceID": null,
+              "targetID": 4,
+              "abilityGameID": null,
+              "fight": 1,
+              "killingAbilityGameID": 441452
+            },
+            {
+              "timestamp": 130000,
+              "type": "heal",
+              "sourceID": 2,
+              "targetID": 1,
+              "abilityGameID": 2061,
+              "fight": 1,
+              "amount": 65000,
+              "overheal": 12000,
+              "hitType": 2
+            },
+            {
+              "timestamp": 155000,
+              "type": "begincast",
+              "sourceID": 100,
+              "targetID": null,
+              "abilityGameID": 441465,
+              "fight": 1
+            },
+            {
+              "timestamp": 157200,
+              "type": "interrupt",
+              "sourceID": 3,
+              "targetID": 100,
+              "abilityGameID": 2139,
+              "fight": 1,
+              "extraAbilityGameID": 441465
+            },
+            {
+              "timestamp": 200000,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 3,
+              "abilityGameID": 435138,
+              "fight": 1,
+              "amount": 95000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 202000,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 3,
+              "abilityGameID": 441452,
+              "fight": 1,
+              "amount": 48000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 203000,
+              "type": "death",
+              "sourceID": null,
+              "targetID": 3,
+              "abilityGameID": null,
+              "fight": 1,
+              "killingAbilityGameID": 441452
+            },
+            {
+              "timestamp": 250000,
+              "type": "begincast",
+              "sourceID": 100,
+              "targetID": null,
+              "abilityGameID": 441465,
+              "fight": 1
+            },
+            {
+              "timestamp": 253500,
+              "type": "cast",
+              "sourceID": 100,
+              "targetID": null,
+              "abilityGameID": 441465,
+              "fight": 1
+            },
+            {
+              "timestamp": 253800,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 2,
+              "abilityGameID": 441465,
+              "fight": 1,
+              "amount": 180000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 254000,
+              "type": "death",
+              "sourceID": null,
+              "targetID": 2,
+              "abilityGameID": null,
+              "fight": 1,
+              "killingAbilityGameID": 441465
+            },
+            {
+              "timestamp": 310000,
+              "type": "damage",
+              "sourceID": 100,
+              "targetID": 6,
+              "abilityGameID": 435138,
+              "fight": 1,
+              "amount": 92000,
+              "hitType": 1
+            },
+            {
+              "timestamp": 312000,
+              "type": "death",
+              "sourceID": null,
+              "targetID": 6,
+              "abilityGameID": null,
+              "fight": 1,
+              "killingAbilityGameID": 435138
+            }
+          ],
+          "nextPageTimestamp": null
+        }
+      }
+    }
+  },
+  "_abilityMap": {
+    "441452": "Savage Charge",
+    "435136": "Digestive Acid",
+    "434803": "Venomous Lash",
+    "441465": "Hungering Bellows",
+    "435138": "Brutal Crush",
+    "2061": "Flash Heal",
+    "2139": "Counterspell"
+  },
+  "_comment": "Fight 1: Ulgrax the Devourer wipe. fightStartTime=60000 (relative to report). All event timestamps are absolute (relative to report start). Normalize by subtracting fightStartTime."
+}

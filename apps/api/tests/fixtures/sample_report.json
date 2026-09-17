@@ -1,0 +1,55 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "title": "Nerub-ar Palace - Mythic Progression",
+        "owner": { "name": "RaidLeader" },
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "fights": [
+          {
+            "id": 1,
+            "name": "Ulgrax the Devourer",
+            "startTime": 60000,
+            "endTime": 452000,
+            "kill": false,
+            "difficulty": 5,
+            "encounterID": 2902,
+            "fightPercentage": 34.2
+          },
+          {
+            "id": 2,
+            "name": "Ulgrax the Devourer",
+            "startTime": 500000,
+            "endTime": 820000,
+            "kill": true,
+            "difficulty": 5,
+            "encounterID": 2902,
+            "fightPercentage": 0
+          },
+          {
+            "id": 5,
+            "name": "The Bloodbound Horror",
+            "startTime": 900000,
+            "endTime": 1260000,
+            "kill": false,
+            "difficulty": 5,
+            "encounterID": 2917,
+            "fightPercentage": 52.1
+          }
+        ],
+        "masterData": {
+          "actors": [
+            { "id": 1, "name": "Tankadin", "type": "Player", "subType": "Paladin", "server": "Stormrage" },
+            { "id": 2, "name": "HolyPriest", "type": "Player", "subType": "Priest", "server": "Stormrage" },
+            { "id": 3, "name": "FrostMage", "type": "Player", "subType": "Mage", "server": "Stormrage" },
+            { "id": 4, "name": "ArmsWarr", "type": "Player", "subType": "Warrior", "server": "Stormrage" },
+            { "id": 5, "name": "RestoSham", "type": "Player", "subType": "Shaman", "server": "Stormrage" },
+            { "id": 6, "name": "DemoLock", "type": "Player", "subType": "Warlock", "server": "Stormrage" },
+            { "id": 100, "name": "Ulgrax the Devourer", "type": "NPC", "subType": "Boss", "server": null }
+          ]
+        }
+      }
+    }
+  }
+}
