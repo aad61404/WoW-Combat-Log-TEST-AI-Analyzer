@@ -157,3 +157,15 @@ class TestNormalizer:
         assert len(heal_events) > 0
         heal_with_overheal = [e for e in heal_events if e.extra and "overheal" in e.extra]
         assert len(heal_with_overheal) > 0
+
+
+def test_request_ability_map_does_not_leak_to_next_request():
+    raw = [{"type": "damage", "timestamp": 1, "abilityGameID": 999999999}]
+    assert normalize_events(raw, [], 0, {999999999: "Demo only"})[0].ability_name == "Demo only"
+    assert normalize_events(raw, [], 0)[0].ability_name is None
+
+
+def test_npc_deaths_are_not_counted_as_player_deaths():
+    actors = [Actor(id=1, name="Boss", type="NPC")]
+    events = normalize_events([{"type": "death", "timestamp": 1, "targetID": 1}], actors, 0)
+    assert events == []

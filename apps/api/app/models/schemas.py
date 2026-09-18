@@ -8,6 +8,7 @@ share these models as their common language.
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -179,6 +180,7 @@ class PlayerAdvice(BaseModel):
 class CoachReport(BaseModel):
     """AI-generated coaching report based on deterministic evidence."""
 
+    source: Literal["ai", "deterministic"] = "ai"
     wipe_summary: str  # 1-2 sentence summary
     primary_causes: list[str]  # Top 3-5 wipe causes
     player_advice: list[PlayerAdvice]  # Per-player advice
@@ -198,6 +200,8 @@ class FullAnalysisResponse(BaseModel):
     report context, fight details, deterministic analysis, and AI coaching.
     """
 
+    demo: bool = False
+    rule_notice: str = "目前僅分析死亡紀錄；Boss 機制規則尚待真實資料驗證。"
     report: ReportSummary
     fight: FightSummary
     analysis: AnalysisResult

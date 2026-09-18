@@ -10,14 +10,16 @@ from __future__ import annotations
 
 import logging
 import re
+import httpx
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException
 
 from app.models.schemas import AnalysisResult, FullAnalysisResponse, ReportSummary
 from app.services.ai_coach import AICoach
 from app.services.analyzer import CombatAnalyzer
-from app.services.encounter_rules import get_rules_for_encounter
 from app.services.normalizer import normalize_events
+from app.services.wcl_client import WCLAPIError
 
 router = APIRouter(prefix="/api", tags=["reports"])
 logger = logging.getLogger(__name__)
@@ -44,11 +46,34 @@ def _extract_report_code(code_or_url: str) -> str:
       - "https://www.warcraftlogs.com/reports/AbCdEf1234"
       - "https://www.warcraftlogs.com/reports/AbCdEf1234#fight=5"
     """
-    match = WCL_URL_PATTERN.search(code_or_url)
-    if match:
-        return match.group(1)
-    # Assume it's already a raw code
-    return code_or_url.strip()
+    text = code_or_url.strip()
+    if re.fullmatch(r"[a-zA-Z0-9]{16}", text):
+        return text
+    url = urlparse(text)
+    host = url.hostname or ""
+    if url.scheme in ("http", "https") and (
+        host == "warcraftlogs.com" or host.endswith(".warcraftlogs.com")
+    ):
+        match = re.fullmatch(r"/reports/([a-zA-Z0-9]{16})/?", url.path)
+        if match:
+            return match.group(1)
+    raise HTTPException(400, "請提供有效的 Warcraft Logs 網址或 16 碼報告代碼。")
+
+
+def _upstream_error(error: Exception) -> HTTPException:
+    if isinstance(error, WCLAPIError):
+        return HTTPException(error.status_code, str(error))
+    if isinstance(error, httpx.TimeoutException):
+        return HTTPException(504, "WCL 回應逾時，請稍後重試。")
+    if isinstance(error, httpx.HTTPStatusError):
+        status = error.response.status_code
+        if status == 429:
+            return HTTPException(429, "WCL 請求額度已達上限，請稍後再試。")
+        if status in (401, 403):
+            return HTTPException(403, "WCL 拒絕存取，請確認憑證與戰報公開權限。")
+        if status == 404:
+            return HTTPException(404, "找不到此 WCL 戰報。")
+    return HTTPException(502, "暫時無法讀取 WCL 資料，請稍後重試。")
 
 
 @router.get("/reports/{code}")
@@ -65,11 +90,8 @@ async def get_report(code: str) -> ReportSummary:
     try:
         return await client.get_report(report_code)
     except Exception as e:
-        logger.error(f"Failed to fetch report {report_code}: {e}")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to fetch report from Warcraft Logs: {str(e)}",
-        )
+        logger.warning("Report request failed: %s", type(e).__name__)
+        raise _upstream_error(e) from e
 
 
 @router.post("/reports/{code}/fights/{fight_id}/analysis")
@@ -98,8 +120,8 @@ async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
     try:
         report = await client.get_report(report_code)
     except Exception as e:
-        logger.error(f"Failed to fetch report {report_code}: {e}")
-        raise HTTPException(status_code=502, detail=f"WCL report fetch failed: {e}")
+        logger.warning("Report request failed: %s", type(e).__name__)
+        raise _upstream_error(e) from e
 
     # 2. Find the specified fight
     fight = next((f for f in report.fights if f.id == fight_id), None)
@@ -111,20 +133,22 @@ async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
 
     # 3. Fetch fight events
     try:
-        raw_events, actors = await client.get_fight_events(report_code, fight)
+        raw_events, actors, ability_names = await client.get_fight_events(report_code, fight)
     except Exception as e:
-        logger.error(f"Failed to fetch events for fight {fight_id}: {e}")
-        raise HTTPException(status_code=502, detail=f"WCL events fetch failed: {e}")
+        logger.warning("Event request failed: %s", type(e).__name__)
+        raise _upstream_error(e) from e
 
     # 4. Normalize events
     normalized = normalize_events(
         raw_events=raw_events,
         actors=actors,
         fight_start_time=fight.start_time,
+        ability_map=ability_names,
     )
 
     # 5. Run encounter rules + deterministic analysis
-    rules = get_rules_for_encounter(fight.encounter_id)
+    # Registry entries are fixture examples, not validated live boss mechanics.
+    rules = []
     analyzer = CombatAnalyzer()
     analysis: AnalysisResult = analyzer.analyze(fight, normalized, rules)
 
@@ -135,8 +159,7 @@ async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
     except Exception as e:
         logger.error(f"AI coach failed: {e}")
         # Use fallback report
-        coach = AICoach()
-        coach_report = coach._build_fallback_report(fight, analysis)
+        coach_report = AICoach._build_fallback_report(fight, analysis)
 
     # 7. Return combined result
     return FullAnalysisResponse(

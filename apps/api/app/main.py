@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import reports
+from app.routers import reports, demo
 from app.services.wcl_client import WCLClient
 
 logger = logging.getLogger(__name__)
@@ -55,9 +55,20 @@ app.add_middleware(
 
 # Include routers
 app.include_router(reports.router)
+app.include_router(demo.router)
 
 
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/api/status")
+async def service_status():
+    """Report configuration presence, never credentials or a connectivity claim."""
+    return {
+        "wcl_configured": bool(settings.wcl_client_id and settings.wcl_client_secret),
+        "gemini_configured": bool(settings.gemini_api_key),
+        "demo_available": True,
+    }

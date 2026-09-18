@@ -32,6 +32,10 @@ class WCLClient:
 
     async def _ensure_token(self) -> str:
         """Get a valid access token, refreshing if expired."""
+        if not settings.wcl_client_id or not settings.wcl_client_secret:
+            raise WCLAPIError(
+                "請在根目錄 .env 設定 WCL_CLIENT_ID 和 WCL_CLIENT_SECRET，並重新啟動後端。", 503
+            )
         if self._token and time.time() < self._token_expires_at - 60:
             return self._token
 
@@ -40,6 +44,8 @@ class WCLClient:
             data={"grant_type": "client_credentials"},
             auth=(settings.wcl_client_id, settings.wcl_client_secret),
         )
+        if resp.status_code in (400, 401, 403):
+            raise WCLAPIError("WCL 憑證驗證失敗，請檢查 Client ID 與 Client Secret。", 503)
         resp.raise_for_status()
         data = resp.json()
 
@@ -62,9 +68,10 @@ class WCLClient:
         resp.raise_for_status()
         result = resp.json()
 
-        if "errors" in result:
-            error_messages = "; ".join(e.get("message", str(e)) for e in result["errors"])
-            raise WCLAPIError(f"GraphQL errors: {error_messages}")
+        if result.get("errors"):
+            raise WCLAPIError(
+                "WCL 無法處理此查詢，請確認戰報可公開存取；若持續失敗需檢查 API 查詢。"
+            )
 
         return result["data"]
 
@@ -104,10 +111,17 @@ class WCLClient:
     }
     """
 
+    @staticmethod
+    def _require_report(data: dict) -> dict:
+        report = (data.get("reportData") or {}).get("report")
+        if report is None:
+            raise WCLAPIError("找不到戰報，或此戰報未公開；請確認網址與存取權限。", 404)
+        return report
+
     async def get_report(self, code: str) -> ReportSummary:
         """Fetch report summary including fights and player actors."""
         data = await self._graphql(self.REPORT_QUERY, {"code": code})
-        report = data["reportData"]["report"]
+        report = self._require_report(data)
 
         fights = [
             FightSummary(
@@ -128,7 +142,7 @@ class WCLClient:
                 id=a["id"],
                 name=a["name"],
                 type=a["type"],
-                sub_type=a.get("subType", ""),
+                sub_type=a.get("subType") or "",
                 server=a.get("server"),
             )
             for a in report["masterData"]["actors"]
@@ -137,7 +151,7 @@ class WCLClient:
         return ReportSummary(
             code=code,
             title=report["title"],
-            owner=report["owner"]["name"],
+            owner=(report.get("owner") or {}).get("name") or "Unknown",
             start_time=report["startTime"],
             end_time=report["endTime"],
             fights=fights,
@@ -149,7 +163,7 @@ class WCLClient:
     # -------------------------------------------------------------------------
 
     EVENTS_QUERY = """
-    query GetFightEvents($code: String!, $fightID: Int!, $startTime: Float!, $endTime: Float!, $nextPage: Float) {
+    query GetFightEvents($code: String!, $fightID: Int!, $startTime: Float!, $endTime: Float!) {
       reportData {
         report(code: $code) {
           events(
@@ -162,6 +176,7 @@ class WCLClient:
             nextPageTimestamp
           }
           masterData {
+            abilities { gameID name }
             actors {
               id
               name
@@ -177,16 +192,17 @@ class WCLClient:
 
     async def get_fight_events(
         self, code: str, fight: FightSummary
-    ) -> tuple[list[dict], list[Actor]]:
+    ) -> tuple[list[dict], list[Actor], dict[int, str]]:
         """
         Fetch all events for a specific fight, handling pagination.
 
         Returns:
-            Tuple of (raw_events, actors)
+            Tuple of (raw_events, actors, ability_names)
         """
         all_events: list[dict] = []
         next_page: float | None = None
         actors: list[Actor] = []
+        ability_names: dict[int, str] = {}
 
         while True:
             variables: dict = {
@@ -199,8 +215,11 @@ class WCLClient:
                 variables["startTime"] = next_page
 
             data = await self._graphql(self.EVENTS_QUERY, variables)
-            report = data["reportData"]["report"]
+            report = self._require_report(data)
             events_data = report["events"]
+            ability_names.update(
+                {a["gameID"]: a["name"] for a in report["masterData"].get("abilities", [])}
+            )
 
             all_events.extend(events_data["data"])
 
@@ -211,17 +230,20 @@ class WCLClient:
                         id=a["id"],
                         name=a["name"],
                         type=a["type"],
-                        sub_type=a.get("subType", ""),
+                        sub_type=a.get("subType") or "",
                         server=a.get("server"),
                     )
                     for a in report["masterData"]["actors"]
                 ]
 
+            previous_start = variables["startTime"]
             next_page = events_data.get("nextPageTimestamp")
+            if next_page is not None and next_page <= previous_start:
+                raise WCLAPIError("WCL pagination did not advance")
             if next_page is None:
                 break
 
-        return all_events, actors
+        return all_events, actors, ability_names
 
     # -------------------------------------------------------------------------
     # Table Query
@@ -242,9 +264,7 @@ class WCLClient:
     }
     """
 
-    async def get_fight_table(
-        self, code: str, fight: FightSummary, data_type: str
-    ) -> dict:
+    async def get_fight_table(self, code: str, fight: FightSummary, data_type: str) -> dict:
         """
         Fetch table data for a fight (DamageDone, DamageTaken, Healing, Deaths, Interrupts).
         """
@@ -270,4 +290,8 @@ class WCLClient:
 
 
 class WCLAPIError(Exception):
-    """Raised when the WCL API returns an error."""
+    """Safe public error text with an appropriate HTTP status."""
+
+    def __init__(self, message: str, status_code: int = 502):
+        super().__init__(message)
+        self.status_code = status_code

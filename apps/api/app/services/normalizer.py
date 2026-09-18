@@ -60,8 +60,10 @@ def normalize_events(
     Returns:
         List of NormalizedEvent, sorted by timestamp.
     """
-    if ability_map is not None:
-        set_ability_names(ability_map)
+    ability_names = (
+        {int(key): value for key, value in ability_map.items()}
+        if ability_map is not None else _ABILITY_NAMES
+    )
 
     # Build actor lookup: id → Actor
     actor_lookup: dict[int, Actor] = {a.id: a for a in actors}
@@ -84,17 +86,21 @@ def normalize_events(
         target_id = raw.get("targetID")
         target_actor = actor_lookup.get(target_id) if target_id else None
 
+        # Boss and pet deaths are not player deaths.
+        if our_type == "death" and (target_actor is None or target_actor.type != "Player"):
+            continue
+
         # Resolve ability name
         ability_id = raw.get("abilityGameID")
         ability_name = None
         if ability_id is not None:
-            ability_name = _ABILITY_NAMES.get(int(ability_id))
+            ability_name = ability_names.get(int(ability_id))
 
         # For death events, the killing ability may be in a different field
         killing_ability_id = raw.get("killingAbilityGameID")
         if our_type == "death" and killing_ability_id:
             ability_id = killing_ability_id
-            ability_name = _ABILITY_NAMES.get(int(killing_ability_id))
+            ability_name = ability_names.get(int(killing_ability_id))
 
         # Build extra dict with any additional fields
         extra: dict = {}
