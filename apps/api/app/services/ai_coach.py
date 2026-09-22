@@ -40,13 +40,13 @@ SYSTEM_PROMPT = """你是一位資深的 World of Warcraft 團隊教練。
 要求：
 1. 語氣專業但友善，像資深 RL 在做 after-action review
 2. 聚焦在可改進的具體行動，不要說廢話
-3. 優先排列最影響 wipe 的原因
+3. 優先列出最值得回顧的事件，不把死亡時間先後當作因果。
 4. 建議以可驗證的事件為依據；資料不足時坦承限制，不要補造細節。
 
 你必須以下面的 JSON 格式回覆，不要加任何 markdown 或其他文字：
 
 {
-  "wipe_summary": "一到兩句話總結這場為什麼滅團",
+  "wipe_summary": "一到兩句話總結戰鬥結果與資料限制",
   "primary_causes": ["主因1", "主因2", "主因3"],
   "player_advice": [
     {
@@ -61,9 +61,6 @@ SYSTEM_PROMPT = """你是一位資深的 World of Warcraft 團隊教練。
 
 class AICoach:
     """Generates coaching reports from deterministic analysis evidence."""
-
-    def __init__(self) -> None:
-        self._client = None
 
     async def generate_report(
         self,
@@ -81,33 +78,47 @@ class AICoach:
         if not settings.gemini_api_key:
             return self._build_fallback_report(fight, analysis)
 
+        client = None
         try:
-            self._client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=60000))
-            response = await self._client.aio.models.generate_content(
+            client = genai.Client(
+                api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=60000)
+            )
+            response = await client.aio.models.generate_content(
                 model=settings.gemini_model,
                 contents=user_message,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     temperature=0.3,  # Low temperature for consistent analysis
                     response_mime_type="application/json",
+                    response_schema=CoachReport,
                 ),
             )
 
             # Parse the JSON response
-            return self._parse_response(response.text)
+            report = self._parse_response(response.text)
+            known_players = {d.player for d in analysis.deaths} | {
+                e.player for e in analysis.evidence if e.player
+            }
+            if any(advice.player not in known_players for advice in report.player_advice):
+                raise ValueError("AI response referenced a player absent from the evidence")
+            return report
 
-        except Exception as e:
-            logger.error(f"AI Coach generation failed: {e}")
+        except Exception as e:  # noqa: BLE001 - preserve evidence when the optional AI fails.
+            logger.warning("AI Coach generation failed: %s", type(e).__name__)
             # Return a fallback report based on evidence
             return self._build_fallback_report(fight, analysis)
         finally:
-            if self._client is not None:
-                await self._client.aio.aclose()
-                self._client.close()
+            if client is not None:
+                try:
+                    await client.aio.aclose()
+                except Exception:  # noqa: BLE001 - cleanup must not discard a completed report.
+                    logger.warning("AI async client cleanup failed")
+                try:
+                    client.close()
+                except Exception:  # noqa: BLE001 - cleanup must not discard a completed report.
+                    logger.warning("AI client cleanup failed")
 
-    def _build_user_message(
-        self, fight: FightSummary, analysis: AnalysisResult
-    ) -> str:
+    def _build_user_message(self, fight: FightSummary, analysis: AnalysisResult) -> str:
         """Build the structured user message for the LLM."""
         data = {
             "fight": {
@@ -162,24 +173,14 @@ class AICoach:
             clean = "\n".join(lines[1:-1])
 
         data = json.loads(clean)
-        return CoachReport(
-            wipe_summary=data.get("wipe_summary", "分析未完成"),
-            primary_causes=data.get("primary_causes", []),
-            player_advice=[
-                PlayerAdvice(
-                    player=pa["player"],
-                    issues=pa.get("issues", []),
-                    suggestions=pa.get("suggestions", []),
-                )
-                for pa in data.get("player_advice", [])
-            ],
-            priority_fixes=data.get("priority_fixes", []),
-        )
+        if not isinstance(data, dict) or not str(data.get("wipe_summary", "")).strip():
+            raise ValueError("Missing AI summary")
+        # The server owns provenance; model output cannot set it.
+        data["source"] = "ai"
+        return CoachReport.model_validate(data, strict=True)
 
     @staticmethod
-    def _build_fallback_report(
-        fight: FightSummary, analysis: AnalysisResult
-    ) -> CoachReport:
+    def _build_fallback_report(fight: FightSummary, analysis: AnalysisResult) -> CoachReport:
         """Build a basic report from evidence when LLM fails."""
         causes = []
         player_issues: dict[str, list[str]] = {}

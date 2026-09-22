@@ -169,3 +169,14 @@ def test_npc_deaths_are_not_counted_as_player_deaths():
     actors = [Actor(id=1, name="Boss", type="NPC")]
     events = normalize_events([{"type": "death", "timestamp": 1, "targetID": 1}], actors, 0)
     assert events == []
+
+
+def test_same_name_players_are_disambiguated_by_realm():
+    actors = [
+        Actor(id=1, name="Player", type="Player", server="RealmA"),
+        Actor(id=2, name="Player", type="Player", server="RealmB"),
+    ]
+    events = normalize_events(
+        [{"type": "death", "timestamp": 1, "targetID": i} for i in [1, 2]], actors, 0
+    )
+    assert [e.target_name for e in events] == ["Player-RealmA", "Player-RealmB"]

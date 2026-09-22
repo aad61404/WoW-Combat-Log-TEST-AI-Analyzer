@@ -119,6 +119,7 @@ class Evidence(BaseModel):
     type: EvidenceType
     severity: Severity
     player: str | None = None  # None for raid-wide events
+    player_id: int | None = None
     description: str  # Factual description, not AI-generated
     details: dict = Field(default_factory=dict)
     # details may contain: ability_id, ability_name, damage_amount, stack_count, etc.
@@ -143,6 +144,7 @@ class DeathDetail(BaseModel):
     """Detailed information about a player death."""
 
     player: str
+    player_id: int | None = None
     timestamp: int  # ms, relative to fight start
     killing_blow: str | None = None  # ability name
     damage_taken_last_5s: list[DamageEntry] = Field(default_factory=list)

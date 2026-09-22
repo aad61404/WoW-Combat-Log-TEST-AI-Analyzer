@@ -10,6 +10,8 @@ This is a pure function with no side effects:
 
 from __future__ import annotations
 
+from collections import Counter
+
 from app.models.schemas import Actor, NormalizedEvent
 
 # WCL event type → our normalized type
@@ -62,12 +64,20 @@ def normalize_events(
     """
     ability_names = (
         {int(key): value for key, value in ability_map.items()}
-        if ability_map is not None else _ABILITY_NAMES
+        if ability_map is not None
+        else _ABILITY_NAMES
     )
 
     # Build actor lookup: id → Actor
     actor_lookup: dict[int, Actor] = {a.id: a for a in actors}
 
+    counts = Counter(a.name for a in actors if a.type == "Player")
+    display_names = {
+        a.id: (
+            f"{a.name}-{a.server or a.id}" if a.type == "Player" and counts[a.name] > 1 else a.name
+        )
+        for a in actors
+    }
     normalized: list[NormalizedEvent] = []
 
     for raw in raw_events:
@@ -104,8 +114,15 @@ def normalize_events(
 
         # Build extra dict with any additional fields
         extra: dict = {}
-        for field in ("overkill", "overheal", "absorbed", "stack", "hitType",
-                      "extraAbilityGameID", "sourceInstance"):
+        for field in (
+            "overkill",
+            "overheal",
+            "absorbed",
+            "stack",
+            "hitType",
+            "extraAbilityGameID",
+            "sourceInstance",
+        ):
             if field in raw:
                 extra[field] = raw[field]
 
@@ -114,9 +131,9 @@ def normalize_events(
                 timestamp=timestamp,
                 type=our_type,
                 source_id=source_id,
-                source_name=source_actor.name if source_actor else None,
+                source_name=display_names[source_actor.id] if source_actor else None,
                 target_id=target_id,
-                target_name=target_actor.name if target_actor else None,
+                target_name=display_names[target_actor.id] if target_actor else None,
                 ability_id=ability_id,
                 ability_name=ability_name,
                 amount=raw.get("amount"),

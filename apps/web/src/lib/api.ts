@@ -15,6 +15,7 @@ export type Report = {
   actors: { type: string; name: string }[];
 };
 export type Evidence = {
+  player_id: number | null;
   timestamp: number;
   type: string;
   severity: string;
@@ -22,6 +23,7 @@ export type Evidence = {
   description: string;
 };
 export type Death = {
+  player_id: number | null;
   timestamp: number;
   player: string;
   killing_blow: string | null;

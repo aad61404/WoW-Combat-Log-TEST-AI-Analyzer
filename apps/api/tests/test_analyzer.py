@@ -113,10 +113,7 @@ class TestCombatAnalyzer:
 
         result = analyzer.analyze(fight, events, rules)
 
-        mechanic_fails = [
-            e for e in result.evidence
-            if e.type == EvidenceType.MECHANIC_FAIL
-        ]
+        mechanic_fails = [e for e in result.evidence if e.type == EvidenceType.MECHANIC_FAIL]
 
         # Digestive Acid hits FrostMage and DemoLock in the fixture
         assert len(mechanic_fails) > 0
@@ -130,10 +127,7 @@ class TestCombatAnalyzer:
 
         result = analyzer.analyze(fight, events, rules)
 
-        missed_interrupts = [
-            e for e in result.evidence
-            if e.type == EvidenceType.MISSED_INTERRUPT
-        ]
+        missed_interrupts = [e for e in result.evidence if e.type == EvidenceType.MISSED_INTERRUPT]
 
         # The second Hungering Bellows (at ~253500) is not interrupted
         assert len(missed_interrupts) >= 1
@@ -146,8 +140,7 @@ class TestCombatAnalyzer:
         result = analyzer.analyze(fight, events, rules)
 
         stack_evidence = [
-            e for e in result.evidence
-            if e.type == EvidenceType.DEBUFF_STACK_EXCEEDED
+            e for e in result.evidence if e.type == EvidenceType.DEBUFF_STACK_EXCEEDED
         ]
 
         # ArmsWarr gets 3 stacks (max safe = 2)
@@ -176,3 +169,58 @@ class TestCombatAnalyzer:
         # But only death evidence, no mechanic fails
         non_death = [e for e in result.evidence if e.type != EvidenceType.DEATH]
         assert len(non_death) == 0
+
+
+def test_death_windows_use_actor_id_and_reset_after_death():
+    from app.models.schemas import NormalizedEvent
+
+    fight, _, _ = _setup_fight_data()
+
+    def event(timestamp, kind, target, amount=None):
+        return NormalizedEvent(
+            timestamp=timestamp, type=kind, target_id=target, target_name="SameName", amount=amount
+        )
+
+    events = [
+        event(1000, "damage", 1, 10),
+        event(1000, "damage", 2, 900),
+        event(2000, "death", 1),
+        event(2000, "damage", 1, 20),
+        event(2500, "death", 1),
+        event(3000, "death", 2),
+    ]
+    deaths = CombatAnalyzer().analyze(fight, events).deaths
+    assert [[d.amount for d in death.damage_taken_last_5s] for death in deaths] == [
+        [10],
+        [20],
+        [900],
+    ]
+    assert [d.player_id for d in deaths] == [1, 1, 2]
+
+
+def test_death_window_includes_boundary_but_not_earlier_or_future_damage():
+    from app.models.schemas import NormalizedEvent
+
+    fight, _, _ = _setup_fight_data()
+    events = [
+        NormalizedEvent(timestamp=t, type=kind, target_id=1, target_name="Player", amount=amount)
+        for t, kind, amount in [
+            (4999, "damage", 1),
+            (5000, "damage", 2),
+            (10000, "death", None),
+            (10000, "damage", 3),
+        ]
+    ]
+    deaths = CombatAnalyzer().analyze(fight, events).deaths
+    assert [d.amount for d in deaths[0].damage_taken_last_5s] == [2]
+
+
+def test_events_outside_fight_are_excluded():
+    from app.models.schemas import NormalizedEvent
+
+    fight, _, _ = _setup_fight_data()
+    events = [
+        NormalizedEvent(timestamp=t, type="death", target_id=1, target_name="Player")
+        for t in [-1, 1000, fight.end_time - fight.start_time + 1]
+    ]
+    assert CombatAnalyzer().analyze(fight, events).total_deaths == 1

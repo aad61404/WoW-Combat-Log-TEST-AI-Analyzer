@@ -377,6 +377,7 @@ export default function Home() {
                             ? result.analysis.deaths.find(
                                 (d) =>
                                   d.player === e.player &&
+                                  d.player_id === e.player_id &&
                                   d.timestamp === e.timestamp,
                               )
                             : null;
@@ -391,6 +392,9 @@ export default function Home() {
                                 className={`event-tag ${e.type === "death" ? "red-text" : "amber-text"}`}
                               >
                                 {names[e.type] || e.type}
+                                {e.type !== "death" && e.player
+                                  ? ` · ${e.player}`
+                                  : ""}
                               </span>
                               <p>{e.description}</p>
                               {death && (

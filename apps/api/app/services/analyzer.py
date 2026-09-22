@@ -11,6 +11,8 @@ is confirmed by explicit rule evaluation.
 
 from __future__ import annotations
 
+from collections import defaultdict, deque
+
 from app.models.schemas import (
     AnalysisResult,
     DamageEntry,
@@ -22,7 +24,6 @@ from app.models.schemas import (
     Severity,
 )
 from app.services.encounter_rules.base import EncounterRule
-
 
 # How many milliseconds before death to look for damage events
 DAMAGE_WINDOW_MS = 5000
@@ -49,6 +50,12 @@ class CombatAnalyzer:
         Returns:
             AnalysisResult with deaths, evidence, and summary stats.
         """
+        # Bound analysis to this fight; preserve the order of equal timestamps.
+        events = sorted(
+            (e for e in events if 0 <= e.timestamp <= fight.end_time - fight.start_time),
+            key=lambda e: e.timestamp,
+        )
+
         # 1. Build death timeline
         deaths = self._analyze_deaths(events)
 
@@ -63,6 +70,7 @@ class CombatAnalyzer:
                     type=EvidenceType.DEATH,
                     severity=Severity.CRITICAL,
                     player=death.player,
+                    player_id=death.player_id,
                     description=(
                         f"{death.player} 死亡"
                         + (f"（致命一擊：{death.killing_blow}）" if death.killing_blow else "")
@@ -93,45 +101,52 @@ class CombatAnalyzer:
             fight_duration_seconds=fight.duration_seconds,
         )
 
-    def _analyze_deaths(
-        self, events: list[NormalizedEvent]
-    ) -> list[DeathDetail]:
+    def _analyze_deaths(self, events: list[NormalizedEvent]) -> list[DeathDetail]:
         """
         Build detailed death timeline.
 
         For each death, collects all damage events within
         DAMAGE_WINDOW_MS before the death timestamp.
         """
-        death_events = [e for e in events if e.type == "death" and e.target_name]
-        damage_events = [e for e in events if e.type == "damage"]
-
+        recent: dict[tuple[str, int | str], deque[NormalizedEvent]] = defaultdict(deque)
         deaths: list[DeathDetail] = []
-
-        for death in death_events:
-            # Find damage taken in the window before death
-            window_start = death.timestamp - DAMAGE_WINDOW_MS
-            pre_death_damage = [
-                DamageEntry(
-                    source=d.source_name or "Unknown",
-                    ability=d.ability_name or f"Ability #{d.ability_id}",
-                    amount=d.amount or 0,
-                    timestamp=d.timestamp,
-                )
-                for d in damage_events
-                if d.target_name == death.target_name
-                and window_start <= d.timestamp <= death.timestamp
-            ]
-
-            # Sort by timestamp (most recent last)
-            pre_death_damage.sort(key=lambda d: d.timestamp)
-
+        for event in events:
+            if event.type not in ("damage", "death") or not event.target_name:
+                continue
+            # Actor IDs distinguish same-name players from different realms.
+            key = (
+                ("id", event.target_id)
+                if event.target_id is not None
+                else ("name", event.target_name)
+            )
+            window = recent[key]
+            while window and window[0].timestamp < event.timestamp - DAMAGE_WINDOW_MS:
+                window.popleft()
+            if event.type == "damage":
+                window.append(event)
+                continue
             deaths.append(
                 DeathDetail(
-                    player=death.target_name,  # type: ignore[arg-type]
-                    timestamp=death.timestamp,
-                    killing_blow=death.ability_name,
-                    damage_taken_last_5s=pre_death_damage,
+                    player=event.target_name,
+                    player_id=event.target_id,
+                    timestamp=event.timestamp,
+                    killing_blow=event.ability_name,
+                    damage_taken_last_5s=[
+                        DamageEntry(
+                            source=d.source_name or "Unknown",
+                            ability=d.ability_name
+                            or (
+                                f"Ability #{d.ability_id}"
+                                if d.ability_id is not None
+                                else "Unknown"
+                            ),
+                            amount=d.amount or 0,
+                            timestamp=d.timestamp,
+                        )
+                        for d in window
+                    ],
                 )
             )
-
+            # A second death after resurrection must not reuse the previous life.
+            window.clear()
         return deaths
