@@ -54,3 +54,33 @@ uv pip compile apps/api/pyproject.toml --extra dev --python-version 3.13 -o apps
 ```
 
 架構與後續功能規劃見 [implementation_plan.md](docs/implementation_plan.md)。
+
+## 瀏覽器回歸測試與 CI
+
+首次安裝測試瀏覽器後，從根目錄執行：
+
+```sh
+bash scripts/npm.sh exec -- playwright install chromium
+make e2e
+```
+
+測試會自行建立正式版前端並啟動獨立的前端 `3100`／後端 `8100`，
+使用 `.next-e2e` 建置目錄，不會重用目前的 3000／8000 開發服務。
+若測試埠號已被占用會直接失敗，請先停止占用它們的程序。
+測試後服務會自動結束。WCL／Gemini 憑證在測試程序中固定為空，
+不呼叫外部分析服務，也不會修改本機 `.env`。
+首次安裝依賴／瀏覽器與建置字體仍需要網路。
+
+同一組案例分別驗證 Chromium 桌面與 Pixel 7 尺寸：
+
+- 真實本機後端的範例分析、死亡明細、事件篩選與返回操作。
+- 無效網址、缺少憑證，以及錯誤後仍可切換至範例。
+- 分析失敗後重新嘗試、後端狀態重新檢查。
+- 首頁、結果與錯誤提示頁面的水平溢出檢查。
+
+失敗時會產生 `apps/web/playwright-report` 與 `apps/web/test-results`，
+包含截圖與 trace；這些檔案不會提交 Git。
+這是 Chromium 手機尺寸模擬，尚不代表 iOS Safari 或實機驗收。
+
+GitHub Actions 設定在 `.github/workflows/check.yml`，於 push／pull request 執行
+Python 測試、前端 lint、正式版建置與瀏覽器測試。遠端首次執行仍需 push 後確認。

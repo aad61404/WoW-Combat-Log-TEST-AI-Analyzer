@@ -1,4 +1,4 @@
-.PHONY: setup dev api web test check
+.PHONY: setup dev api web test check e2e
 
 setup:
 	bash scripts/setup.sh
@@ -18,3 +18,6 @@ test:
 check: test
 	bash scripts/npm.sh run lint
 	bash scripts/npm.sh run build
+
+e2e:
+	bash scripts/npm.sh run test:e2e
