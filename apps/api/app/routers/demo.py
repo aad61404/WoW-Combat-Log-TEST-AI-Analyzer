@@ -39,6 +39,7 @@ def demo_report() -> ReportSummary:
                 difficulty=f["difficulty"],
                 encounter_id=f["encounterID"],
                 fight_percentage=f["fightPercentage"],
+                boss_percentage=f.get("bossPercentage"),
             )
         ],
         actors=[

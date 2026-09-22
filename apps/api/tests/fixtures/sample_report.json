@@ -15,7 +15,8 @@
             "kill": false,
             "difficulty": 5,
             "encounterID": 2902,
-            "fightPercentage": 34.2
+            "fightPercentage": 34.2,
+            "bossPercentage": 34.2
           },
           {
             "id": 2,
@@ -25,7 +26,8 @@
             "kill": true,
             "difficulty": 5,
             "encounterID": 2902,
-            "fightPercentage": 0
+            "fightPercentage": 0,
+            "bossPercentage": 0
           },
           {
             "id": 5,
@@ -35,7 +37,8 @@
             "kill": false,
             "difficulty": 5,
             "encounterID": 2917,
-            "fightPercentage": 52.1
+            "fightPercentage": 52.1,
+            "bossPercentage": 52.1
           }
         ],
         "masterData": {

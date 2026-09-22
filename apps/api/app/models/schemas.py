@@ -38,7 +38,8 @@ class FightSummary(BaseModel):
     kill: bool
     difficulty: int | None = None
     encounter_id: int
-    fight_percentage: float | None = None  # Boss HP % at wipe (0 = dead)
+    fight_percentage: float | None = None  # Encounter progress, not necessarily boss HP
+    boss_percentage: float | None = None  # Remaining HP of active boss(es)
 
     @property
     def duration_seconds(self) -> float:

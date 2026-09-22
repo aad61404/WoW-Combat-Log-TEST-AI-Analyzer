@@ -265,7 +265,9 @@ export default function Home() {
                         {time(f.end_time - f.start_time)} <span>·</span>{" "}
                         {f.kill
                           ? "Boss 已擊殺"
-                          : `Boss 剩餘 ${f.fight_percentage ?? "—"}%`}
+                          : f.boss_percentage == null
+                            ? "未提供 Boss 血量"
+                            : `Boss 剩餘 ${f.boss_percentage}%`}
                       </p>
                     </div>
                     <span className={`pill ${f.kill ? "green" : "red"}`}>

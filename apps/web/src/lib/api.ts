@@ -6,6 +6,7 @@ export type Fight = {
   kill: boolean;
   difficulty: number | null;
   fight_percentage: number | null;
+  boss_percentage: number | null;
 };
 export type Report = {
   code: string;

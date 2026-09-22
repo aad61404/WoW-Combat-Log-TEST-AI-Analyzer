@@ -127,6 +127,7 @@ class AICoach:
                 "duration_display": fight.duration_display,
                 "kill": fight.kill,
                 "fight_percentage": fight.fight_percentage,
+                "boss_percentage": fight.boss_percentage,
             },
             "total_deaths": analysis.total_deaths,
             "deaths": [

@@ -96,6 +96,7 @@ class WCLClient:
             difficulty
             encounterID
             fightPercentage
+            bossPercentage
           }
           masterData {
             actors(type: "Player") {
@@ -133,6 +134,7 @@ class WCLClient:
                 difficulty=f.get("difficulty"),
                 encounter_id=f["encounterID"],
                 fight_percentage=f.get("fightPercentage"),
+                boss_percentage=f.get("bossPercentage"),
             )
             for f in report["fights"]
         ]
