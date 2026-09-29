@@ -10,6 +10,8 @@ death timeline analysis — just without mechanic_fail evidence.
 
 from __future__ import annotations
 
+from app.models.schemas import WCLSite
+
 from .base import EncounterRule
 from .generic import AvoidableDamageRule, DebuffStackRule, InterruptRule
 from .venomous_abyss import VENOMOUS_ABYSS_RULES
@@ -74,13 +76,18 @@ ENCOUNTER_RULES: dict[int, list[EncounterRule]] = {
 }
 
 
-def get_rules_for_encounter(encounter_id: int) -> list[EncounterRule]:
+def get_rules_for_encounter(
+    encounter_id: int, site: WCLSite = WCLSite.RETAIL
+) -> list[EncounterRule]:
     """
     Get the analysis rules for a specific encounter.
 
     Returns an empty list for encounters without defined rules.
     The analyzer will still produce death timeline analysis.
     """
+    # Encounter IDs are numbered per site, so retail rules must not match classic fights.
+    if site is not WCLSite.RETAIL:
+        return []
     return ENCOUNTER_RULES.get(encounter_id, [])
 
 

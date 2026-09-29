@@ -20,6 +20,7 @@ from app.models.schemas import (
     CoachReport,
     FightSummary,
     PlayerAdvice,
+    WCLSite,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ SYSTEM_PROMPT = """你是一位資深的 World of Warcraft 團隊教練。
 事件紀錄是觀察結果，不等於已確認因果。只根據提供的資料解釋，
 不要推測站位、治療責任、未提供的機制或指定玩家過失。
 若只有死亡紀錄，明確說明無法單憑死亡判定滅團主因。成功擊殺的戰鬥不要稱作滅團。
+game_version 不是 retail 時為經典版伺服器：不要引用正式服才有的技能、機制或打法。
 
 你的任務是把這些分析結果轉成清晰、具體、可執行的中文教練報告。
 
@@ -66,6 +68,7 @@ class AICoach:
         self,
         fight: FightSummary,
         analysis: AnalysisResult,
+        site: WCLSite = WCLSite.RETAIL,
     ) -> CoachReport:
         """
         Generate a coaching report from analysis evidence.
@@ -73,7 +76,7 @@ class AICoach:
         The LLM receives structured data, not raw combat logs.
         """
         # Build the user message with fight context and evidence
-        user_message = self._build_user_message(fight, analysis)
+        user_message = self._build_user_message(fight, analysis, site)
 
         if not settings.gemini_api_key:
             return self._build_fallback_report(fight, analysis)
@@ -118,9 +121,12 @@ class AICoach:
                 except Exception:  # noqa: BLE001 - cleanup must not discard a completed report.
                     logger.warning("AI client cleanup failed")
 
-    def _build_user_message(self, fight: FightSummary, analysis: AnalysisResult) -> str:
+    def _build_user_message(
+        self, fight: FightSummary, analysis: AnalysisResult, site: WCLSite = WCLSite.RETAIL
+    ) -> str:
         """Build the structured user message for the LLM."""
         data = {
+            "game_version": site.value,
             "fight": {
                 "name": fight.name,
                 "duration_seconds": fight.duration_seconds,

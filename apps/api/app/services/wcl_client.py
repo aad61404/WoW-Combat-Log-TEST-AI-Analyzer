@@ -12,35 +12,41 @@ import time
 import httpx
 
 from app.config import settings
-from app.models.schemas import Actor, FightSummary, ReportSummary
+from app.models.schemas import Actor, FightSummary, ReportSummary, WCLSite
 
 
 class WCLClient:
     """Warcraft Logs API v2 GraphQL client with automatic OAuth token management."""
 
-    TOKEN_URL = "https://www.warcraftlogs.com/oauth/token"
-    API_URL = "https://www.warcraftlogs.com/api/v2/client"
+    @staticmethod
+    def token_url(site: WCLSite = WCLSite.RETAIL) -> str:
+        return f"https://{site.host}/oauth/token"
+
+    @staticmethod
+    def api_url(site: WCLSite = WCLSite.RETAIL) -> str:
+        return f"https://{site.host}/api/v2/client"
 
     def __init__(self) -> None:
-        self._token: str | None = None
-        self._token_expires_at: float = 0.0
+        # Tokens are cached per site: WCL does not document cross-site token validity.
+        self._tokens: dict[WCLSite, tuple[str, float]] = {}
         self._http = httpx.AsyncClient(timeout=30.0)
 
     # -------------------------------------------------------------------------
     # OAuth2 Token Management
     # -------------------------------------------------------------------------
 
-    async def _ensure_token(self) -> str:
-        """Get a valid access token, refreshing if expired."""
+    async def _ensure_token(self, site: WCLSite = WCLSite.RETAIL) -> str:
+        """Get a valid access token for the site, refreshing if expired."""
         if not settings.wcl_client_id or not settings.wcl_client_secret:
             raise WCLAPIError(
                 "請在根目錄 .env 設定 WCL_CLIENT_ID 和 WCL_CLIENT_SECRET，並重新啟動後端。", 503
             )
-        if self._token and time.time() < self._token_expires_at - 60:
-            return self._token
+        cached = self._tokens.get(site)
+        if cached and time.time() < cached[1] - 60:
+            return cached[0]
 
         resp = await self._http.post(
-            self.TOKEN_URL,
+            self.token_url(site),
             data={"grant_type": "client_credentials"},
             auth=(settings.wcl_client_id, settings.wcl_client_secret),
         )
@@ -49,19 +55,21 @@ class WCLClient:
         resp.raise_for_status()
         data = resp.json()
 
-        self._token = data["access_token"]
-        self._token_expires_at = time.time() + data.get("expires_in", 3600)
-        return self._token  # type: ignore[return-value]
+        token = data["access_token"]
+        self._tokens[site] = (token, time.time() + data.get("expires_in", 3600))
+        return token
 
     # -------------------------------------------------------------------------
     # GraphQL Execution
     # -------------------------------------------------------------------------
 
-    async def _graphql(self, query: str, variables: dict | None = None) -> dict:
-        """Execute a GraphQL query against the WCL API."""
-        token = await self._ensure_token()
+    async def _graphql(
+        self, query: str, variables: dict | None = None, site: WCLSite = WCLSite.RETAIL
+    ) -> dict:
+        """Execute a GraphQL query against the WCL API of the given site."""
+        token = await self._ensure_token(site)
         resp = await self._http.post(
-            self.API_URL,
+            self.api_url(site),
             json={"query": query, "variables": variables or {}},
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -116,12 +124,14 @@ class WCLClient:
     def _require_report(data: dict) -> dict:
         report = (data.get("reportData") or {}).get("report")
         if report is None:
-            raise WCLAPIError("找不到戰報，或此戰報未公開；請確認網址與存取權限。", 404)
+            raise WCLAPIError(
+                "找不到戰報，或此戰報未公開；請確認網址與存取權限。經典版戰報請貼完整網址。", 404
+            )
         return report
 
-    async def get_report(self, code: str) -> ReportSummary:
+    async def get_report(self, code: str, site: WCLSite = WCLSite.RETAIL) -> ReportSummary:
         """Fetch report summary including fights and player actors."""
-        data = await self._graphql(self.REPORT_QUERY, {"code": code})
+        data = await self._graphql(self.REPORT_QUERY, {"code": code}, site)
         report = self._require_report(data)
 
         fights = [
@@ -152,6 +162,7 @@ class WCLClient:
 
         return ReportSummary(
             code=code,
+            site=site,
             title=report["title"],
             owner=(report.get("owner") or {}).get("name") or "Unknown",
             start_time=report["startTime"],
@@ -193,7 +204,7 @@ class WCLClient:
     """
 
     async def get_fight_events(
-        self, code: str, fight: FightSummary
+        self, code: str, fight: FightSummary, site: WCLSite = WCLSite.RETAIL
     ) -> tuple[list[dict], list[Actor], dict[int, str]]:
         """
         Fetch all events for a specific fight, handling pagination.
@@ -216,7 +227,7 @@ class WCLClient:
             if next_page is not None:
                 variables["startTime"] = next_page
 
-            data = await self._graphql(self.EVENTS_QUERY, variables)
+            data = await self._graphql(self.EVENTS_QUERY, variables, site)
             report = self._require_report(data)
             events_data = report["events"]
             ability_names.update(
@@ -266,7 +277,9 @@ class WCLClient:
     }
     """
 
-    async def get_fight_table(self, code: str, fight: FightSummary, data_type: str) -> dict:
+    async def get_fight_table(
+        self, code: str, fight: FightSummary, data_type: str, site: WCLSite = WCLSite.RETAIL
+    ) -> dict:
         """
         Fetch table data for a fight (DamageDone, DamageTaken, Healing, Deaths, Interrupts).
         """
@@ -279,6 +292,7 @@ class WCLClient:
                 "endTime": float(fight.end_time),
                 "dataType": data_type,
             },
+            site,
         )
         return data["reportData"]["report"]["table"]
 

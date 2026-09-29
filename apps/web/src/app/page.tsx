@@ -28,9 +28,11 @@ export default function Home() {
   async function load(useDemo: boolean) {
     setError("");
     try {
-      const code = useDemo ? "demo" : reportCode(input);
+      const target = useDemo
+        ? { code: "demo", site: "retail" as const }
+        : reportCode(input);
       setBusy("正在讀取戰報…");
-      const data = await fetchReport(code, useDemo);
+      const data = await fetchReport(target.code, target.site, useDemo);
       setReport(data);
       setDemo(useDemo);
       setResult(null);
@@ -47,7 +49,7 @@ export default function Home() {
       demo ? "正在分析範例戰鬥…" : "正在讀取事件並產生報告，可能需要一些時間…",
     );
     try {
-      setResult(await fetchAnalysis(report.code, id, demo));
+      setResult(await fetchAnalysis(report.code, report.site, id, demo));
       setFilter("all");
     } catch (e) {
       setError(e instanceof Error ? e.message : "分析失敗，請重試。");

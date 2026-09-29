@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException
 
-from app.models.schemas import AnalysisResult, FullAnalysisResponse, ReportSummary
+from app.models.schemas import AnalysisResult, FullAnalysisResponse, ReportSummary, WCLSite
 from app.services.ai_coach import AICoach
 from app.services.analyzer import CombatAnalyzer
 from app.services.normalizer import normalize_events
@@ -37,18 +37,26 @@ def _get_wcl_client():
     return wcl_client
 
 
-def _extract_report_code(code_or_url: str) -> str:
+def _site_from_host(host: str) -> WCLSite:
+    # The label right before warcraftlogs.com is the site; a language prefix
+    # (tw.warcraftlogs.com, tw.classic.warcraftlogs.com) comes before it.
+    labels = host.split(".")
+    label = labels[-3] if len(labels) >= 3 else ""
+    return WCLSite(label) if label in {s.value for s in WCLSite} else WCLSite.RETAIL
+
+
+def _extract_report_code(code_or_url: str, site: WCLSite = WCLSite.RETAIL) -> tuple[str, WCLSite]:
     """
-    Extract report code from either a raw code or a full WCL URL.
+    Extract report code and site from either a raw code or a full WCL URL.
 
     Supports:
-      - "AbCdEf1234" (raw code)
+      - "AbCdEf1234" (raw code, uses the given site)
       - "https://www.warcraftlogs.com/reports/AbCdEf1234"
-      - "https://www.warcraftlogs.com/reports/AbCdEf1234#fight=5"
+      - "https://tw.classic.warcraftlogs.com/reports/AbCdEf1234#fight=5"
     """
     text = code_or_url.strip()
     if re.fullmatch(r"[a-zA-Z0-9]{16}", text):
-        return text
+        return text, site
     url = urlparse(text)
     host = url.hostname or ""
     if url.scheme in ("http", "https") and (
@@ -56,7 +64,7 @@ def _extract_report_code(code_or_url: str) -> str:
     ):
         match = re.fullmatch(r"/reports/([a-zA-Z0-9]{16})/?", url.path)
         if match:
-            return match.group(1)
+            return match.group(1), _site_from_host(host)
     raise HTTPException(400, "請提供有效的 Warcraft Logs 網址或 16 碼報告代碼。")
 
 
@@ -77,7 +85,7 @@ def _upstream_error(error: Exception) -> HTTPException:
 
 
 @router.get("/reports/{code}")
-async def get_report(code: str) -> ReportSummary:
+async def get_report(code: str, site: WCLSite = WCLSite.RETAIL) -> ReportSummary:
     """
     Fetch report summary from Warcraft Logs.
 
@@ -85,17 +93,19 @@ async def get_report(code: str) -> ReportSummary:
     This is a lightweight call — no analysis performed.
     """
     client = _get_wcl_client()
-    report_code = _extract_report_code(code)
+    report_code, site = _extract_report_code(code, site)
 
     try:
-        return await client.get_report(report_code)
+        return await client.get_report(report_code, site)
     except Exception as e:
         logger.warning("Report request failed: %s", type(e).__name__)
         raise _upstream_error(e) from e
 
 
 @router.post("/reports/{code}/fights/{fight_id}/analysis")
-async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
+async def analyze_fight(
+    code: str, fight_id: int, site: WCLSite = WCLSite.RETAIL
+) -> FullAnalysisResponse:
     """
     Complete analysis pipeline for a specific fight.
 
@@ -114,11 +124,11 @@ async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
     - Should not be cached/prefetched by browsers
     """
     client = _get_wcl_client()
-    report_code = _extract_report_code(code)
+    report_code, site = _extract_report_code(code, site)
 
     # 1. Fetch report summary
     try:
-        report = await client.get_report(report_code)
+        report = await client.get_report(report_code, site)
     except Exception as e:
         logger.warning("Report request failed: %s", type(e).__name__)
         raise _upstream_error(e) from e
@@ -133,7 +143,9 @@ async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
 
     # 3. Fetch fight events
     try:
-        raw_events, actors, ability_names = await client.get_fight_events(report_code, fight)
+        raw_events, actors, ability_names = await client.get_fight_events(
+            report_code, fight, site
+        )
     except Exception as e:
         logger.warning("Event request failed: %s", type(e).__name__)
         raise _upstream_error(e) from e
@@ -155,7 +167,7 @@ async def analyze_fight(code: str, fight_id: int) -> FullAnalysisResponse:
     # 6. AI coach report
     try:
         coach = AICoach()
-        coach_report = await coach.generate_report(fight, analysis)
+        coach_report = await coach.generate_report(fight, analysis, site)
     except Exception as e:
         logger.error(f"AI coach failed: {e}")
         # Use fallback report

@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from app.config import settings
+from app.models.schemas import WCLSite
 from app.routers.demo import load
 from app.services.wcl_client import WCLClient, WCLAPIError
 
@@ -38,11 +39,11 @@ async def test_oauth_report_and_paginated_events_share_token(credentials):
 
     def handler(request):
         requests.append(request)
-        if str(request.url) == WCLClient.TOKEN_URL:
+        if str(request.url) == WCLClient.token_url():
             assert request.headers["authorization"].startswith("Basic ")
             assert request.content == b"grant_type=client_credentials"
             return httpx.Response(200, json={"access_token": "local-token", "expires_in": 3600})
-        assert str(request.url) == WCLClient.API_URL
+        assert str(request.url) == WCLClient.api_url()
         assert request.headers["authorization"] == "Bearer local-token"
         body = json.loads(request.content)
         assert body["variables"]["code"] == "AbCdEfGh12345678"
@@ -86,7 +87,7 @@ async def test_oauth_report_and_paginated_events_share_token(credentials):
         assert starts == [60000, 70000]
         assert result_actors[0].name == actors[0]["name"]
         assert abilities[435136] == "Digestive Acid"
-        assert sum(str(r.url) == WCLClient.TOKEN_URL for r in requests) == 1
+        assert sum(str(r.url) == WCLClient.token_url() for r in requests) == 1
     finally:
         await client.close()
 
@@ -100,8 +101,7 @@ async def test_expired_token_is_refreshed(credentials):
         return httpx.Response(200, json={"access_token": "fresh", "expires_in": 3600})
 
     client = await client_with_transport(handler)
-    client._token = "expired"
-    client._token_expires_at = 0
+    client._tokens[WCLSite.RETAIL] = ("expired", 0)
     try:
         assert await client._ensure_token() == "fresh"
         assert await client._ensure_token() == "fresh"
@@ -113,7 +113,7 @@ async def test_expired_token_is_refreshed(credentials):
 @pytest.mark.asyncio
 async def test_graphql_errors_do_not_return_partial_analysis_or_raw_error(credentials):
     def handler(request):
-        if str(request.url) == WCLClient.TOKEN_URL:
+        if str(request.url) == WCLClient.token_url():
             return httpx.Response(200, json={"access_token": "test"})
         return httpx.Response(
             200,

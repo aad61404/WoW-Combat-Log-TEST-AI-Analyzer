@@ -8,8 +8,11 @@ export type Fight = {
   fight_percentage: number | null;
   boss_percentage: number | null;
 };
+export type Site = "retail" | "classic" | "fresh" | "sod" | "vanilla";
+const CLASSIC_SITES: Site[] = ["classic", "fresh", "sod", "vanilla"];
 export type Report = {
   code: string;
+  site: Site;
   title: string;
   owner: string;
   fights: Fight[];
@@ -60,9 +63,15 @@ export type Analysis = {
 const base = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 ).replace(/\/$/, "");
-export function reportCode(input: string): string {
+// The label right before warcraftlogs.com is the site; a language prefix
+// (tw.warcraftlogs.com, tw.classic.warcraftlogs.com) comes before it.
+function siteFromHost(hostname: string): Site {
+  const label = hostname.split(".").at(-3) ?? "";
+  return CLASSIC_SITES.find((site) => site === label) ?? "retail";
+}
+export function reportCode(input: string): { code: string; site: Site } {
   const text = input.trim();
-  if (/^[a-zA-Z0-9]{16}$/.test(text)) return text;
+  if (/^[a-zA-Z0-9]{16}$/.test(text)) return { code: text, site: "retail" };
   try {
     const url = new URL(text);
     if (
@@ -74,7 +83,7 @@ export function reportCode(input: string): string {
     )
       throw new Error();
     const match = url.pathname.match(/^\/reports\/([a-zA-Z0-9]{16})(?:\/|$)/);
-    if (match) return match[1];
+    if (match) return { code: match[1], site: siteFromHost(url.hostname) };
   } catch {}
   throw new Error("請貼上有效的 Warcraft Logs 戰報網址，或 16 碼報告代碼。");
 }
@@ -107,15 +116,22 @@ async function request<T>(
     throw error;
   }
 }
-export const fetchReport = (code: string, demo: boolean) =>
+export const fetchReport = (code: string, site: Site, demo: boolean) =>
   request<Report>(
-    demo ? "/demo/report" : `/reports/${encodeURIComponent(code)}`,
+    demo
+      ? "/demo/report"
+      : `/reports/${encodeURIComponent(code)}?site=${site}`,
   );
-export const fetchAnalysis = (code: string, id: number, demo: boolean) =>
+export const fetchAnalysis = (
+  code: string,
+  site: Site,
+  id: number,
+  demo: boolean,
+) =>
   request<Analysis>(
     demo
       ? `/demo/fights/${id}/analysis`
-      : `/reports/${encodeURIComponent(code)}/fights/${id}/analysis`,
+      : `/reports/${encodeURIComponent(code)}/fights/${id}/analysis?site=${site}`,
     "POST",
   );
 export function time(ms: number) {

@@ -18,6 +18,20 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
+class WCLSite(str, Enum):
+    """Warcraft Logs site; each has its own report database and API host."""
+
+    RETAIL = "retail"
+    CLASSIC = "classic"
+    FRESH = "fresh"
+    SOD = "sod"
+    VANILLA = "vanilla"
+
+    @property
+    def host(self) -> str:
+        return "www.warcraftlogs.com" if self is WCLSite.RETAIL else f"{self.value}.warcraftlogs.com"
+
+
 class Actor(BaseModel):
     """A participant in the combat log (player, NPC, or pet)."""
 
@@ -56,6 +70,7 @@ class ReportSummary(BaseModel):
     """Summary of a full Warcraft Logs report."""
 
     code: str
+    site: WCLSite = WCLSite.RETAIL
     title: str
     owner: str
     start_time: int  # epoch ms
