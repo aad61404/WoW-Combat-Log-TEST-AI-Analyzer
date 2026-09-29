@@ -1,6 +1,6 @@
 # 真實服務驗收清單
 
-目前狀態：本機範例、57 個後端測試與 8 個 Chromium 桌面／手機尺寸測試通過。
+目前狀態：本機範例、79 個後端測試與 8 個 Chromium 桌面／手機尺寸測試通過。
 WCL／Gemini 憑證仍未設定，不能將離線 HTTP 模擬測試視為真實串接成功。
 
 ## 已核對的資料語意
@@ -20,6 +20,25 @@ WCL／Gemini 憑證仍未設定，不能將離線 HTTP 模擬測試視為真實�
 5. 使用事件需跨頁的戰鬥，核對資料完整性，再測擊殺成功的戰鬥。
 6. 真實查詢若與 schema／事件格式不同，修正並保存去識別化的最小 fixture 作為回歸測試。
 7. Boss 機制規則須另行以指定版本／難度驗證，通過前維持停用。
+
+## 經典版測試戰報
+
+經典版（classic／vanilla／fresh／sod）的公開戰報清單放在 `local-data/classic-test-reports.csv`。
+`local-data/` 已列入 `.gitignore`：戰報公開但會顯示玩家名稱，只留本機。遺失時從根目錄重建（約 2 分鐘）：
+
+```sh
+python3 scripts/find_classic_reports.py
+```
+
+- 來源：GitHub issue／PR 內文中的 `<site>.warcraftlogs.com/reports/<16 碼>` 連結，
+  多為伺服器模擬器（AzerothCore、VMaNGOS、ChromieCraft）、Boss 插件（BigWigs、DBM）與經典版 bug 回報。
+  warcraftlogs.com、wowhead、icy-veins 對程式抓取回 403，無法直接爬。
+- 未登入時 GitHub 搜尋每分鐘 10 次；設定 `GITHUB_TOKEN` 可放寬。每個查詢最多 1000 筆。
+- GitHub 偶爾回傳不完整的分頁（`incomplete_results`），腳本會重試；翻頁以 `total_count` 判斷。
+- 表中的團本分類只是從 issue 標題推測，已知會誤判。真實 zone／encounterID 以 WCL API 回傳為準。
+- classic.warcraftlogs.com 依序承載過 60 級、TBC、WotLK、Cata 與 MoP Classic；
+  標題寫 MC／BWL 的戰報可能是後期版本的角色重打舊團本。fresh 也包含 TBC 內容。
+- 戰報來自 bug 回報，指定的場次常是為了某個技能，不一定有死亡或滅團。
 
 ## Gemini
 
