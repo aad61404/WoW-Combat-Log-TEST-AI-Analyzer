@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from .base import EncounterRule
 from .generic import AvoidableDamageRule, DebuffStackRule, InterruptRule
+from .venomous_abyss import VENOMOUS_ABYSS_RULES
 
 # =============================================================================
 # Boss Rule Definitions
@@ -68,6 +69,8 @@ ENCOUNTER_RULES: dict[int, list[EncounterRule]] = {
             max_safe_stacks=3,
         ),
     ],
+
+    **VENOMOUS_ABYSS_RULES,
 }
 
 
