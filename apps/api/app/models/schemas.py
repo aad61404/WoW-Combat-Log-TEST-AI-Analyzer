@@ -79,6 +79,12 @@ class ReportSummary(BaseModel):
     actors: list[Actor]
 
 
+class ReportImportRequest(BaseModel):
+    """A WCL report URL or 16-character report code to import."""
+
+    url: str
+
+
 # =============================================================================
 # Normalized Events
 # =============================================================================

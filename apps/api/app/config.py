@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
+    # Persistence and cache
+    database_url: str = "sqlite+aiosqlite:///./wcl_analyzer.db"
+    redis_url: str = "redis://localhost:6379/0"
+
     # CORS — allowed origins for the frontend dev server
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

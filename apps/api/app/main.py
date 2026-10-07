@@ -13,6 +13,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.db import engine
+from app.models.database import Base
 from app.routers import reports, demo
 from app.services.wcl_client import WCLClient
 
@@ -26,12 +28,15 @@ wcl_client: WCLClient | None = None
 async def lifespan(app: FastAPI):
     """Manage application lifecycle — startup and shutdown."""
     global wcl_client
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
     wcl_client = WCLClient()
     logger.info("WCL client initialized")
     yield
     if wcl_client:
         await wcl_client.close()
         logger.info("WCL client closed")
+    await engine.dispose()
 
 
 app = FastAPI(

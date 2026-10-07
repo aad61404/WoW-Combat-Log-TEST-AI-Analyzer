@@ -13,9 +13,18 @@ import re
 import httpx
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.schemas import AnalysisResult, FullAnalysisResponse, ReportSummary, WCLSite
+from app.db import get_session
+from app.models.schemas import (
+    AnalysisResult,
+    FullAnalysisResponse,
+    ReportImportRequest,
+    ReportSummary,
+    WCLSite,
+)
+from app.repositories.reports import ReportRepository
 from app.services.ai_coach import AICoach
 from app.services.analyzer import CombatAnalyzer
 from app.services.normalizer import normalize_events
@@ -85,7 +94,11 @@ def _upstream_error(error: Exception) -> HTTPException:
 
 
 @router.get("/reports/{code}")
-async def get_report(code: str, site: WCLSite = WCLSite.RETAIL) -> ReportSummary:
+async def get_report(
+    code: str,
+    site: WCLSite = WCLSite.RETAIL,
+    session: AsyncSession = Depends(get_session),
+) -> ReportSummary:
     """
     Fetch report summary from Warcraft Logs.
 
@@ -95,11 +108,30 @@ async def get_report(code: str, site: WCLSite = WCLSite.RETAIL) -> ReportSummary
     client = _get_wcl_client()
     report_code, site = _extract_report_code(code, site)
 
+    stored = await ReportRepository(session).get(report_code)
+    if stored is not None:
+        return stored
+
     try:
         return await client.get_report(report_code, site)
     except Exception as e:
         logger.warning("Report request failed: %s", type(e).__name__)
         raise _upstream_error(e) from e
+
+
+@router.post("/reports/import", status_code=201)
+async def import_report(
+    request: ReportImportRequest, session: AsyncSession = Depends(get_session)
+) -> ReportSummary:
+    """Fetch a public WCL report and persist its report, fight, and player metadata."""
+    client = _get_wcl_client()
+    report_code, site = _extract_report_code(request.url)
+    try:
+        report = await client.get_report(report_code, site)
+    except Exception as e:
+        logger.warning("Report import failed: %s", type(e).__name__)
+        raise _upstream_error(e) from e
+    return await ReportRepository(session).upsert(report)
 
 
 @router.post("/reports/{code}/fights/{fight_id}/analysis")

@@ -23,6 +23,22 @@ make dev
 - API 文件：http://localhost:8000/docs
 - 健康檢查：http://localhost:8000/api/health
 
+也可以使用 Docker 啟動完整服務（Web、API、PostgreSQL、Redis）：
+
+```sh
+docker compose up --build
+```
+
+第一次匯入公開戰報：
+
+```sh
+curl -X POST http://localhost:8000/api/reports/import \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://www.warcraftlogs.com/reports/REPORT_CODE"}'
+```
+
+匯入後 `GET /api/reports/{code}` 會優先讀取 PostgreSQL；未匯入的 code 仍相容原本的即時 WCL 查詢。
+
 首頁提供戰報輸入 → 戰鬥選擇 → 分析結果。點選「開啟範例戰報」即可免金鑰體驗。
 範例僅包含第 1 場的事件資料，由後端分析引擎處理；不會呼叫 WCL 或 Gemini。
 結果可篩選事件、展開死前 5 秒傷害，並查看紀錄摘要。
@@ -54,6 +70,13 @@ uv pip compile apps/api/pyproject.toml --extra dev --python-version 3.13 -o apps
 ```
 
 架構與後續功能規劃見 [implementation_plan.md](docs/implementation_plan.md)。
+
+## 公開真實戰報候選
+
+`data/public-report-candidates.json` 收錄玩家公開分享、且附來源的真實 Warcraft Logs
+候選報告。設定 WCL 憑證後，可執行 `scripts/validate_public_reports.py` 檢查目前是否仍可公開
+讀取，以及其中的 kill／wipe 與 encounter 分布。清單不保存玩家名稱或原始事件；建立匿名
+回歸 fixture 的流程見 [public-test-data.md](docs/public-test-data.md)。
 
 ## 瀏覽器回歸測試與 CI
 

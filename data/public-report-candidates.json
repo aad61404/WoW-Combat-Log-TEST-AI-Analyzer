@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-09-24",
+  "notice": "Publicly shared Warcraft Logs candidates. Validate through the official API before using them as fixtures; reports can later become private, archived, or unavailable.",
+  "reports": [
+    {
+      "code": "qkhazHRj3CF6NVW9",
+      "category": "raid_review",
+      "published_at": "2026-09-20",
+      "source_url": "https://www.reddit.com/r/CompetitiveWoW/comments/1wl9wde/weekly_raid_discussion/",
+      "notes": "Recent raid discussion; useful candidate for mixed progression pulls."
+    },
+    {
+      "code": "yM3Y6PDZk8qth7RX",
+      "category": "guild_raid",
+      "published_at": "2026-08",
+      "source_url": "https://www.reddit.com/r/wowguilds/comments/1v9b57v/na_e_c_l_i_p_s_e_recruiting_ce_mythic_raiders/",
+      "notes": "Public final raid-night log shared by a recruiting guild."
+    },
+    {
+      "code": "xfTbjM6BVKFw7a8g",
+      "category": "raid_edge_case",
+      "published_at": "2026-09",
+      "source_url": "https://www.reddit.com/r/CompetitiveWoW/comments/1w8lbz3/first_boss_of_the_raid_bugged_out_and_did_nothing/",
+      "notes": "Public report attached to a boss-behaviour anomaly; useful edge-case candidate."
+    },
+    {
+      "code": "Fg9kft6KMRNxYwG8",
+      "category": "ranked_reference",
+      "published_at": "2026-03-21",
+      "fight_hint": 19,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1rzz5n9/how_do_i_check_if_my_dps_is_okay/",
+      "notes": "Shared as a high-performing ranking comparison."
+    },
+    {
+      "code": "dMnF1QWJc4vNZLD6",
+      "category": "player_review",
+      "published_at": "2026-04-10",
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1shug3q/very_low_dps_as_frost_mage_logs_attached/",
+      "notes": "Player-submitted raid log requesting performance review."
+    },
+    {
+      "code": "FhM6LRqG1KWBdmkD",
+      "category": "player_review",
+      "published_at": "2026-04",
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1sf84qp/udk_low_dps_followup/",
+      "notes": "Player-submitted raid log with explicit request for analysis."
+    },
+    {
+      "code": "7RarAY3296CvdzGj",
+      "category": "player_review",
+      "published_at": "2026-05",
+      "source_url": "https://www.reddit.com/r/wow/comments/1t51ecv/demonoly_warlock_looking_for_feedback_on_logs/",
+      "notes": "Player-submitted raid log requesting feedback."
+    },
+    {
+      "code": "d2TLpcmrKgD1qn6H",
+      "category": "mythic_plus",
+      "published_at": "2026-09-20",
+      "fight_hint": 1,
+      "source_url": "https://us.forums.blizzard.com/en/wow/t/ret-paladin-need-help-low-parse-in-m/2355469",
+      "notes": "Recent player-submitted Mythic+ report; useful for confirming unsupported-content handling."
+    }
+  ]
+}
