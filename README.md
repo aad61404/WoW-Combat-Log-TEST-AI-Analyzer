@@ -2,6 +2,11 @@
 
 Warcraft Logs → Python 規則分析 → 結構化證據 → Gemini 中文教練報告。
 
+> [!WARNING]
+> **目前尚未使用 Warcraft Logs API 真實資料。** 開發與測試暫時使用 mock／fixture；
+> 公開 report code 候選也尚未經官方 API 驗證。最新狀態與切換真實資料的條件請見
+> [current-status.md](docs/current-status.md)。
+
 ## macOS 開發環境
 
 使用 Python 3.13、uv、Node 24.21.0（見 `.nvmrc`）與 npm。
@@ -69,7 +74,10 @@ Python 依賴鎖定在 `apps/api/requirements-dev.lock`，npm 使用 `apps/web/p
 uv pip compile apps/api/pyproject.toml --extra dev --python-version 3.13 -o apps/api/requirements-dev.lock
 ```
 
-架構與後續功能規劃見 [implementation_plan.md](docs/implementation_plan.md)。
+目前兩個月的產品／求職主線與優先順序見
+[active-roadmap.md](docs/active-roadmap.md)。架構細節與長期功能 backlog 見
+[implementation_plan.md](docs/implementation_plan.md) 與 [PLAN.md](PLAN.md)；若優先順序衝突，
+以 active roadmap 為準。
 
 ## 公開真實戰報候選
 

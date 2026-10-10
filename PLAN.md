@@ -1,5 +1,28 @@
 # WoW Combat Log AI Analyzer — AI/FDE Learning Project
 
+> [!IMPORTANT]
+> **2026-10-07 路線更新：**近期工作的唯一優先順序以
+> [`docs/active-roadmap.md`](docs/active-roadmap.md) 為準。本文件後續內容保留為技術設計與
+> 長期 backlog；其中 Redis、RAG、Agent、MCP、微服務等項目不得早於 active roadmap
+> 所定義的 FastAPI → WCL API → PostgreSQL → GET API 端到端里程碑。
+
+## Active Focus（2026-10-07）
+
+```text
+Python Backend
+      ↓
+WoW Full-stack Product
+      ↓
+Deterministic Combat Analysis
+      ↓
+Applied AI + Evals
+      ↓
+Production + Interview Readiness
+```
+
+目前只做一個主專案。近期不新增第二專案，也不把 RAG、LangGraph、MCP、Multi-Agent、
+Redis、Kubernetes、微服務或 Fine-tuning 排入當週工作。
+
 ## Current Baseline（2026-09-26）
 
 這份 roadmap 是從現有 MVP 繼續演進，不是砍掉重做。目前已具備 FastAPI、Next.js、

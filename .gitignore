@@ -7,5 +7,6 @@ node_modules/
 dist/
 *.egg-info/
 .pytest_cache/
+*.db
 # Public WCL report lists for manual live testing; they expose player names.
 local-data/

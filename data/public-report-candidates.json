@@ -1,6 +1,12 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24",
+  "updated_at": "2026-10-10",
+  "record_count": 20,
+  "validation": {
+    "status": "source_verified_api_pending",
+    "wcl_api_checked_at": null,
+    "reason": "WCL Client Credentials are not configured yet."
+  },
   "notice": "Publicly shared Warcraft Logs candidates. Validate through the official API before using them as fixtures; reports can later become private, archived, or unavailable.",
   "reports": [
     {
@@ -60,6 +66,98 @@
       "fight_hint": 1,
       "source_url": "https://us.forums.blizzard.com/en/wow/t/ret-paladin-need-help-low-parse-in-m/2355469",
       "notes": "Recent player-submitted Mythic+ report; useful for confirming unsupported-content handling."
+    },
+    {
+      "code": "qrDbCK7k9ayNgtJM",
+      "category": "player_review",
+      "published_at": "2026-07-12",
+      "fight_hint": 19,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1uuh6aj/help_me_figure_out_why_my_dmg_sucks/",
+      "notes": "Player-submitted mythic raid log requesting damage review."
+    },
+    {
+      "code": "BJyk4N6HTXrZc1LG",
+      "category": "mythic_plus",
+      "published_at": "2026-09-04",
+      "fight_hint": 26,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1w746bg/help_me_make_sense_of_my_log/",
+      "notes": "Public high-ranked Mythic+ comparison log."
+    },
+    {
+      "code": "WFgGv4XBH2Tb9cjt",
+      "category": "mythic_plus",
+      "published_at": "2026-09-29",
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1wt7ybq/outlaw_rogue_dps_issues/",
+      "notes": "Player-submitted Mythic+ log requesting rotation feedback."
+    },
+    {
+      "code": "Z42jLxM3wFgXHp7a",
+      "category": "ranked_reference",
+      "published_at": "2026-09-02",
+      "fight_hint": 79,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1w53x7r/help_with_logs/",
+      "notes": "Public comparison report used to explain cast-count differences."
+    },
+    {
+      "code": "mFGXdH1a8wMVBWpv",
+      "category": "player_review",
+      "published_at": "2026-06-24",
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1ue4kgl/looking_for_help_to_improve_my_parses/",
+      "notes": "Player-submitted raid report requesting parse review."
+    },
+    {
+      "code": "7zfYcANdTJXH1DrB",
+      "category": "mythic_plus",
+      "published_at": "2026-07-16",
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1uyjaj8/tank_parses/",
+      "notes": "Player-submitted Blood DK Mythic+ report."
+    },
+    {
+      "code": "2yBtc9r3TdhQV1wz",
+      "category": "player_review",
+      "published_at": "2026-05-03",
+      "fight_hint": 2,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1t2kti1/help_with_raid_dps_please/",
+      "notes": "Player-submitted heroic raid report from a first-time raider."
+    },
+    {
+      "code": "QRbwt4pv2hzYNjqm",
+      "category": "mythic_plus",
+      "published_at": "2026-04-30",
+      "fight_hint": 15,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1szs0d7/question_about_warcraftlog_parses_in_mythic/",
+      "notes": "Public Mythic+ report shared in a parse interpretation question."
+    },
+    {
+      "code": "HRfy2gMjZW13LnA4",
+      "category": "player_review",
+      "published_at": "2026-05-20",
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1tij5zz/why_are_chimaerus_logs_way_lower_on_the_website/",
+      "notes": "Player-submitted heroic raid report used to compare parse calculations."
+    },
+    {
+      "code": "Hb3JPh2RjyLNm8W6",
+      "category": "player_review",
+      "published_at": "2026-04-05",
+      "fight_hint": 40,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1scvakq/268_mm_hunter_with_very_low_dps/",
+      "notes": "Full player-submitted raid report with several boss fight references."
+    },
+    {
+      "code": "MpFRdxK3tqm7GN1f",
+      "category": "player_review",
+      "published_at": "2026-08-23",
+      "fight_hint": 18,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1vvzq30/parsing_dead_last_in_raids/",
+      "notes": "Player raid report used in a public cast-timeline comparison."
+    },
+    {
+      "code": "VHMyQT79p1faGwPc",
+      "category": "ranked_reference",
+      "published_at": "2026-08-23",
+      "fight_hint": 37,
+      "source_url": "https://www.reddit.com/r/wownoob/comments/1vvzq30/parsing_dead_last_in_raids/",
+      "notes": "Higher-performing comparison report paired with MpFRdxK3tqm7GN1f."
     }
   ]
 }
