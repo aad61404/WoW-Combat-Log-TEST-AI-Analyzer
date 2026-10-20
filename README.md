@@ -89,6 +89,14 @@ uv pip compile apps/api/pyproject.toml --extra dev --python-version 3.13 -o apps
 讀取，以及其中的 kill／wipe 與 encounter 分布。清單不保存玩家名稱或原始事件；建立匿名
 回歸 fixture 的流程見 [public-test-data.md](docs/public-test-data.md)。
 
+## 學習與效能實驗計畫
+
+[全端、後端效能與 Cloud 學習路線](docs/learning/roadmap.md) 整合論壇建議、
+Sky／Tom 的壓測分享與本專案現況，包含建議評估、分階段待辦與驗收標準。
+公司 `mobile-stress-test` 原始碼尚待取得核對；計畫不表示功能已實作或容量已驗證。
+每次實驗使用 [實驗紀錄模板](docs/learning/experiment-template.md)，保存負載條件、
+正確性、效能、成本與改善前後證據。
+
 ## 瀏覽器回歸測試與 CI
 
 首次安裝測試瀏覽器後，從根目錄執行：
