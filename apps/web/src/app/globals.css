@@ -548,6 +548,92 @@ input::placeholder {
   font-size: 19px;
   margin-top: 18px;
 }
+.roster-panel {
+  margin: 0 0 23px;
+  background: #191a20;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.roster-panel .panel-title p {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 7px;
+}
+.roster-scroll {
+  overflow-x: auto;
+}
+.roster-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.roster-table th,
+.roster-table td {
+  padding: 14px 16px;
+  text-align: right;
+  border-bottom: 1px solid #2b2c36;
+  white-space: nowrap;
+}
+.roster-table th {
+  color: #858397;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  background: #15161b;
+}
+.roster-table th:first-child,
+.roster-table td:first-child,
+.roster-table th:last-child,
+.roster-table td:last-child {
+  text-align: left;
+}
+.roster-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.roster-table tbody tr:hover {
+  background: #1e1f27;
+}
+.roster-table td > strong,
+.roster-table td > small {
+  display: block;
+}
+.roster-table td > small,
+.ability-cell small {
+  color: var(--muted);
+  font-size: 9px;
+  margin-top: 5px;
+}
+.role {
+  display: inline-block;
+  min-width: 54px;
+  padding: 5px 7px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+.role-tank {
+  color: #a7c5ef;
+  background: #223047;
+}
+.role-healer {
+  color: #9fd3b0;
+  background: #20372b;
+}
+.role-dps {
+  color: #e4a8ad;
+  background: #42262b;
+}
+.ability-cell {
+  min-width: 220px;
+  white-space: normal !important;
+}
+.ability-cell > span {
+  display: inline-block;
+  margin-right: 18px;
+}
 .red-text {
   color: #e89b9f;
 }

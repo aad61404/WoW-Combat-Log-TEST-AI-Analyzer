@@ -4,11 +4,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
+
 from app.config import settings
-from app.services.ai_coach import AICoach
-from app.services.wcl_client import WCLClient, WCLAPIError
+from app.main import app
 from app.routers.demo import demo_analysis
+from app.services.ai_coach import AICoach
+from app.services.wcl_client import WCLAPIError, WCLClient
 
 
 def test_demo_pipeline_without_external_services(monkeypatch):
@@ -30,6 +31,20 @@ def test_demo_pipeline_without_external_services(monkeypatch):
         assert data["coach_report"]["source"] == "deterministic"
         assert data["analysis"]["deaths"][0]["damage_taken_last_5s"]
         assert client.post("/api/demo/fights/2/analysis").status_code == 404
+
+        combat = client.get("/api/demo/fights/1/combat-data")
+        assert combat.status_code == 200
+        combat_data = combat.json()
+        assert combat_data["data_origin"] == "fixture"
+        assert combat_data["player_count"] == 20
+        assert len(combat_data["players"]) == 20
+        assert {player["role"] for player in combat_data["players"]} == {
+            "tank",
+            "healer",
+            "dps",
+        }
+        assert all(player["top_abilities"] for player in combat_data["players"])
+        assert client.get("/api/demo/fights/999/combat-data").status_code == 404
 
 
 @pytest.mark.asyncio

@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     DateTime,
@@ -71,3 +72,18 @@ class ActorRecord(Base):
     sub_type: Mapped[str] = mapped_column(String(100), default="")
     server: Mapped[str | None] = mapped_column(String(255), nullable=True)
     report: Mapped[ReportRecord] = relationship(back_populates="actors")
+
+
+class DemoSnapshotRecord(Base):
+    """Versioned fixture snapshot; never a source of live WCL data.
+
+    JSON preserves nested ability/evidence details while the core report tables
+    remain queryable. This additive table does not alter existing report rows.
+    """
+
+    __tablename__ = "demo_snapshots"
+
+    report_id: Mapped[int] = mapped_column(
+        ForeignKey("reports.id", ondelete="CASCADE"), primary_key=True
+    )
+    payload: Mapped[dict] = mapped_column(JSON)

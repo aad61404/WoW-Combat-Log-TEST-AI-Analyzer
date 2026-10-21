@@ -49,6 +49,20 @@
             { "id": 4, "name": "ArmsWarr", "type": "Player", "subType": "Warrior", "server": "Stormrage" },
             { "id": 5, "name": "RestoSham", "type": "Player", "subType": "Shaman", "server": "Stormrage" },
             { "id": 6, "name": "DemoLock", "type": "Player", "subType": "Warlock", "server": "Stormrage" },
+            { "id": 7, "name": "BloodKnight", "type": "Player", "subType": "DeathKnight", "server": "Stormrage" },
+            { "id": 8, "name": "MistMonk", "type": "Player", "subType": "Monk", "server": "Stormrage" },
+            { "id": 9, "name": "RestoDruid", "type": "Player", "subType": "Druid", "server": "Stormrage" },
+            { "id": 10, "name": "HolyPal", "type": "Player", "subType": "Paladin", "server": "Stormrage" },
+            { "id": 11, "name": "PresEvoker", "type": "Player", "subType": "Evoker", "server": "Stormrage" },
+            { "id": 12, "name": "HavocDH", "type": "Player", "subType": "DemonHunter", "server": "Stormrage" },
+            { "id": 13, "name": "AssaRogue", "type": "Player", "subType": "Rogue", "server": "Stormrage" },
+            { "id": 14, "name": "BMHunter", "type": "Player", "subType": "Hunter", "server": "Stormrage" },
+            { "id": 15, "name": "EnhSham", "type": "Player", "subType": "Shaman", "server": "Stormrage" },
+            { "id": 16, "name": "BalanceDruid", "type": "Player", "subType": "Druid", "server": "Stormrage" },
+            { "id": 17, "name": "ShadowPriest", "type": "Player", "subType": "Priest", "server": "Stormrage" },
+            { "id": 18, "name": "FuryWar", "type": "Player", "subType": "Warrior", "server": "Stormrage" },
+            { "id": 19, "name": "RetPal", "type": "Player", "subType": "Paladin", "server": "Stormrage" },
+            { "id": 20, "name": "FrostDK", "type": "Player", "subType": "DeathKnight", "server": "Stormrage" },
             { "id": 100, "name": "Ulgrax the Devourer", "type": "NPC", "subType": "Boss", "server": null }
           ]
         }

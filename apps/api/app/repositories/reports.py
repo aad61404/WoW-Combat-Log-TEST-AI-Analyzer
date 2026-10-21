@@ -4,8 +4,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.database import ActorRecord, FightRecord, ReportRecord
-from app.models.schemas import Actor, FightSummary, ReportSummary
+from app.models.database import ActorRecord, DemoSnapshotRecord, FightRecord, ReportRecord
+from app.models.schemas import Actor, DemoSnapshot, FightSummary, ReportSummary, StoredDemoSnapshot
 
 
 class ReportRepository:
@@ -17,13 +17,51 @@ class ReportRepository:
             select(ReportRecord)
             .where(ReportRecord.code == code)
             .options(selectinload(ReportRecord.fights), selectinload(ReportRecord.actors))
+            .execution_options(populate_existing=True)
         )
         record = (await self.session.execute(query)).scalar_one_or_none()
         return self._to_schema(record) if record else None
 
     async def upsert(self, report: ReportSummary) -> ReportSummary:
+        try:
+            await self._write_report(report)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        return report
+
+    async def save_demo(self, snapshot: DemoSnapshot) -> None:
+        # Revalidate even model_copy/model_construct callers before any writes.
+        snapshot = DemoSnapshot.model_validate(snapshot.model_dump(mode="json"))
+        try:
+            record = await self._write_report(snapshot.analysis.report)
+            self.session.add(
+                DemoSnapshotRecord(report_id=record.id, payload=snapshot.model_dump(mode="json"))
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    async def get_demo(self) -> StoredDemoSnapshot | None:
+        query = (
+            select(DemoSnapshotRecord.payload)
+            .join(ReportRecord, DemoSnapshotRecord.report_id == ReportRecord.id)
+            .where(ReportRecord.code == "demo")
+        )
+        payload = (await self.session.execute(query)).scalar_one_or_none()
+        if payload is None:
+            return None
+        return StoredDemoSnapshot.model_validate(
+            {**payload, "database_engine": self.session.get_bind().dialect.name}
+        )
+
+    async def _write_report(self, report: ReportSummary) -> ReportRecord:
         record = (
-            await self.session.execute(select(ReportRecord).where(ReportRecord.code == report.code))
+            await self.session.execute(
+                select(ReportRecord).where(ReportRecord.code == report.code).with_for_update()
+            )
         ).scalar_one_or_none()
         if record is None:
             record = ReportRecord(
@@ -36,6 +74,10 @@ class ReportRepository:
             self.session.add(record)
             await self.session.flush()
         else:
+            # Refreshes invalidate the old detailed snapshot in the same transaction.
+            await self.session.execute(
+                delete(DemoSnapshotRecord).where(DemoSnapshotRecord.report_id == record.id)
+            )
             await self.session.execute(
                 delete(FightRecord).where(FightRecord.report_id == record.id)
             )
@@ -77,8 +119,7 @@ class ReportRepository:
                 for a in report.actors
             ]
         )
-        await self.session.commit()
-        return report
+        return record
 
     @staticmethod
     def _to_schema(record: ReportRecord) -> ReportSummary:

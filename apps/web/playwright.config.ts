@@ -2,6 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 
 const root = path.resolve(__dirname, "../..");
+const python = path.join(root, process.platform === "win32"
+  ? ".venv/Scripts/python.exe" : ".venv/bin/python");
+// Never use the developer's configured database for browser tests.
+const testDb = path.join(root, "apps/api", `.e2e-${process.pid}.db`).replaceAll("\\", "/");
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -21,7 +25,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        ".venv/bin/python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8100",
+        `"${python}" -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8100`,
       cwd: root,
       url: "http://127.0.0.1:8100/api/health",
       reuseExistingServer: false,
@@ -29,6 +33,7 @@ export default defineConfig({
         WCL_CLIENT_ID: "",
         WCL_CLIENT_SECRET: "",
         GEMINI_API_KEY: "",
+        DATABASE_URL: `sqlite+aiosqlite:///${testDb}`,
         CORS_ORIGINS: '["http://127.0.0.1:3100"]',
       },
     },

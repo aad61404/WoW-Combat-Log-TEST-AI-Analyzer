@@ -4,9 +4,14 @@ import { FormEvent, useState } from "react";
 import ServiceStatus from "@/components/ServiceStatus";
 import {
   Analysis,
+  FightCombatData,
   Report,
+  StoredDemoSnapshot,
   fetchAnalysis,
+  fetchDemoCombatData,
   fetchReport,
+  fetchStoredDemo,
+  saveDemoSnapshot,
   reportCode,
   time,
 } from "@/lib/api";
@@ -21,7 +26,9 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [report, setReport] = useState<Report | null>(null);
   const [result, setResult] = useState<Analysis | null>(null);
+  const [combatData, setCombatData] = useState<FightCombatData | null>(null);
   const [demo, setDemo] = useState(false);
+  const [storedSnapshot, setStoredSnapshot] = useState<StoredDemoSnapshot | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
@@ -36,6 +43,8 @@ export default function Home() {
       setReport(data);
       setDemo(useDemo);
       setResult(null);
+      setCombatData(null);
+      setStoredSnapshot(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "讀取失敗，請重試。");
     } finally {
@@ -49,7 +58,18 @@ export default function Home() {
       demo ? "正在分析範例戰鬥…" : "正在讀取事件並產生報告，可能需要一些時間…",
     );
     try {
-      setResult(await fetchAnalysis(report.code, report.site, id, demo));
+      if (storedSnapshot && storedSnapshot.analysis.fight.id === id) {
+        setResult(storedSnapshot.analysis);
+        setCombatData(storedSnapshot.combat_data);
+        setFilter("all");
+        return;
+      }
+      const [analysis, details] = await Promise.all([
+        fetchAnalysis(report.code, report.site, id, demo),
+        demo ? fetchDemoCombatData(id) : Promise.resolve(null),
+      ]);
+      setResult(analysis);
+      setCombatData(details);
       setFilter("all");
     } catch (e) {
       setError(e instanceof Error ? e.message : "分析失敗，請重試。");
@@ -57,10 +77,31 @@ export default function Home() {
       setBusy("");
     }
   }
+  async function openStoredDemo(saveFirst: boolean) {
+    setError("");
+    setBusy(saveFirst ? "正在儲存範例並從資料庫讀回…" : "正在從資料庫讀取範例…");
+    try {
+      if (saveFirst) await saveDemoSnapshot();
+      // A separate GET verifies persisted data, rather than displaying the POST input.
+      const stored = await fetchStoredDemo();
+      setStoredSnapshot(stored);
+      setReport(stored.analysis.report);
+      setResult(stored.analysis);
+      setCombatData(stored.combat_data);
+      setDemo(true);
+      setFilter("all");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "資料庫操作失敗，請重試。");
+    } finally {
+      setBusy("");
+    }
+  }
   function reset() {
     setReport(null);
     setResult(null);
+    setCombatData(null);
     setError("");
+    setStoredSnapshot(null);
   }
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -145,6 +186,23 @@ export default function Home() {
               <span className="spinner" />
               {busy}
             </div>
+          )}
+          {(!report || demo) && (
+            <section className="notice" aria-label="範例資料儲存">
+              <p>
+                {storedSnapshot
+                  ? `已從 ${storedSnapshot.database_engine === "postgresql" ? "PostgreSQL" : "SQLite"} 讀回 · 儲存於 ${new Date(storedSnapshot.saved_at).toLocaleString()}`
+                  : "範例可存入目前設定的資料庫，重新整理後仍可讀回。"}
+                {" "}資料仍為合成 Fixture，不是真實戰報；範例版本為 Retail，不是 TBC。
+              </p>
+              <button className="secondary" disabled={!!busy} onClick={() => openStoredDemo(true)}>
+                儲存範例到 DB
+              </button>{" "}
+              <button className="secondary" disabled={!!busy} onClick={() => openStoredDemo(false)}>
+                從 DB 讀取範例
+              </button>
+              <p className="hint">儲存會更新同一份範例；不會新增重複資料或覆寫真實戰報。</p>
+            </section>
           )}
           {!report && (
             <>
@@ -305,8 +363,10 @@ export default function Home() {
                 </div>
                 <button
                   className="text-button"
+                  disabled={!!busy}
                   onClick={() => {
                     setResult(null);
+                    setCombatData(null);
                     setError("");
                   }}
                 >
@@ -344,6 +404,72 @@ export default function Home() {
                   </strong>
                 </div>
               </div>
+              {combatData && (
+                <section className="roster-panel">
+                  <div className="panel-title">
+                    <div>
+                      <h3>團隊戰鬥資料</h3>
+                      <p>
+                        {combatData.player_count} 名玩家 · Fixture 模擬資料
+                      </p>
+                    </div>
+                    <span className="pill purple">MOCK DATA</span>
+                  </div>
+                  <div className="roster-scroll">
+                    <table className="roster-table">
+                      <thead>
+                        <tr>
+                          <th>玩家</th>
+                          <th>定位</th>
+                          <th>DPS</th>
+                          <th>HPS</th>
+                          <th>死亡</th>
+                          <th>斷法</th>
+                          <th>活躍率</th>
+                          <th>主要技能</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...combatData.players]
+                          .sort((a, b) => {
+                            const order = { tank: 0, healer: 1, dps: 2 };
+                            return order[a.role] - order[b.role] || b.dps - a.dps;
+                          })
+                          .map((player) => (
+                            <tr key={player.actor_id}>
+                              <td>
+                                <strong>{player.name}</strong>
+                                <small>
+                                  {player.spec} {player.class_name} · iLvl {player.item_level}
+                                </small>
+                              </td>
+                              <td>
+                                <span className={`role role-${player.role}`}>
+                                  {player.role.toUpperCase()}
+                                </span>
+                              </td>
+                              <td>{Math.round(player.dps).toLocaleString()}</td>
+                              <td>{Math.round(player.hps).toLocaleString()}</td>
+                              <td className={player.deaths ? "red-text" : ""}>
+                                {player.deaths}
+                              </td>
+                              <td>{player.interrupts}</td>
+                              <td>{player.active_time_percentage.toFixed(1)}%</td>
+                              <td className="ability-cell">
+                                {player.top_abilities.map((ability) => (
+                                  <span key={ability.ability_id}>
+                                    {ability.ability_name}
+                                    <small>{ability.casts} 次施放</small>
+                                  </span>
+                                ))}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
               <div className="analysis-grid">
                 <section className="panel">
                   <div className="panel-title">

@@ -123,3 +123,36 @@ test("backend unavailable state recovers on explicit refresh", async ({
   await page.getByRole("button", { name: "重新檢查" }).click();
   await expect(page.getByLabel("服務設定狀態")).toContainText("WCL · 未設定");
 });
+
+test("fixture snapshot survives reload and is read back from the database", async ({ page }) => {
+  await page.getByRole("button", { name: "儲存範例到 DB" }).click();
+  await expect(page.getByLabel("範例資料儲存")).toContainText("已從 SQLite 讀回");
+  await expect(page.locator(".roster-table tbody tr")).toHaveCount(20);
+  await expect(page.locator(".stats")).toContainText("4 次");
+  await expectFitsViewport(page);
+  await page.reload();
+  // The read path must work even if all fixture-generation endpoints are unavailable.
+  await page.route("**/api/demo/fights/**", (route) => route.abort());
+  await page.route("**/api/demo/report", (route) => route.abort());
+  await page.route("**/api/demo/import", (route) => route.abort());
+  await page.getByRole("button", { name: "從 DB 讀取範例" }).click();
+  await expect(page.getByLabel("範例資料儲存")).toContainText("已從 SQLite 讀回");
+  await expect(page.locator(".roster-table tbody tr")).toHaveCount(20);
+  await expect(page.locator(".roster-panel")).toContainText("MOCK DATA");
+  await page.getByRole("button", { name: "返回戰鬥列表" }).click();
+  await page.getByRole("button", { name: "分析戰鬥" }).click();
+  await expect(page.getByRole("heading", { name: "戰鬥紀錄摘要" })).toBeVisible();
+});
+
+test("database failure preserves the current fixture analysis", async ({ page }) => {
+  await openDemo(page);
+  await page.route("**/api/demo/import", (route) => route.fulfill({
+    status: 503, contentType: "application/json",
+    headers: { "access-control-allow-origin": "http://127.0.0.1:3100" },
+    body: JSON.stringify({ detail: "無法儲存範例，請確認資料庫連線後重試。" }),
+  }));
+  await page.getByRole("button", { name: "儲存範例到 DB" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("資料庫連線");
+  await expect(page.locator(".roster-table tbody tr")).toHaveCount(20);
+  await expect(page.getByRole("button", { name: "儲存範例到 DB" })).toBeEnabled();
+});

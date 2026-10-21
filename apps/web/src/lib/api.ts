@@ -40,6 +40,7 @@ export type Death = {
 };
 export type Analysis = {
   demo: boolean;
+  report: Report;
   rule_notice: string;
   fight: Fight;
   analysis: {
@@ -59,6 +60,38 @@ export type Analysis = {
       suggestions: string[];
     }[];
   };
+};
+export type AbilityUsage = {
+  ability_id: number;
+  ability_name: string;
+  casts: number;
+  hits: number;
+  total: number;
+  critical_hits: number;
+};
+export type PlayerCombatSummary = {
+  actor_id: number;
+  name: string;
+  class_name: string;
+  spec: string;
+  role: "tank" | "healer" | "dps";
+  item_level: number;
+  total_damage: number;
+  dps: number;
+  total_healing: number;
+  hps: number;
+  deaths: number;
+  interrupts: number;
+  active_time_percentage: number;
+  top_abilities: AbilityUsage[];
+};
+export type FightCombatData = {
+  data_origin: "fixture";
+  notice: string;
+  fight_id: number;
+  duration_seconds: number;
+  player_count: number;
+  players: PlayerCombatSummary[];
 };
 const base = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -134,6 +167,21 @@ export const fetchAnalysis = (
       : `/reports/${encodeURIComponent(code)}/fights/${id}/analysis?site=${site}`,
     "POST",
   );
+export const fetchDemoCombatData = (fightId: number) =>
+  request<FightCombatData>(`/demo/fights/${fightId}/combat-data`);
+export type StoredDemoSnapshot = {
+  schema_version: 1;
+  data_origin: "fixture";
+  storage: "database";
+  database_engine: "postgresql" | "sqlite";
+  saved_at: string;
+  analysis: Analysis;
+  combat_data: FightCombatData;
+};
+export const saveDemoSnapshot = () =>
+  request<StoredDemoSnapshot>("/demo/import", "POST");
+export const fetchStoredDemo = () =>
+  request<StoredDemoSnapshot>("/demo/stored");
 export function time(ms: number) {
   const seconds = Math.floor(ms / 1000);
   return `${Math.floor(seconds / 60)

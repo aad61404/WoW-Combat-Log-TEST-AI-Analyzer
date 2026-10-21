@@ -7,11 +7,12 @@ share these models as their common language.
 
 from __future__ import annotations
 
+from collections import Counter
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel, Field, model_validator
 
 # =============================================================================
 # WCL Data Models
@@ -29,7 +30,9 @@ class WCLSite(str, Enum):
 
     @property
     def host(self) -> str:
-        return "www.warcraftlogs.com" if self is WCLSite.RETAIL else f"{self.value}.warcraftlogs.com"
+        return (
+            "www.warcraftlogs.com" if self is WCLSite.RETAIL else f"{self.value}.warcraftlogs.com"
+        )
 
 
 class Actor(BaseModel):
@@ -83,6 +86,60 @@ class ReportImportRequest(BaseModel):
     """A WCL report URL or 16-character report code to import."""
 
     url: str
+
+
+class AbilityUsage(BaseModel):
+    """Aggregated ability numbers for the offline demo dataset."""
+
+    ability_id: int
+    ability_name: str
+    casts: int = Field(ge=0)
+    hits: int = Field(ge=0)
+    total: int = Field(ge=0)
+    critical_hits: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def check_hits(self) -> AbilityUsage:
+        if self.critical_hits > self.hits:
+            raise ValueError("critical_hits cannot exceed hits")
+        return self
+
+
+class PlayerCombatSummary(BaseModel):
+    """Per-player combat summary shaped like data derived from WCL tables."""
+
+    actor_id: int
+    name: str
+    class_name: str
+    spec: str
+    role: Literal["tank", "healer", "dps"]
+    item_level: int = Field(ge=0)
+    total_damage: int = Field(ge=0)
+    dps: float = Field(ge=0, allow_inf_nan=False)
+    total_healing: int = Field(ge=0)
+    hps: float = Field(ge=0, allow_inf_nan=False)
+    deaths: int = Field(ge=0)
+    interrupts: int = Field(ge=0)
+    active_time_percentage: float = Field(ge=0, le=100, allow_inf_nan=False)
+    top_abilities: list[AbilityUsage]
+
+
+class FightCombatData(BaseModel):
+    """Detailed demo data. It must never be presented as a live WCL response."""
+
+    data_origin: Literal["fixture"] = "fixture"
+    notice: str
+    fight_id: int
+    duration_seconds: float = Field(gt=0, allow_inf_nan=False)
+    player_count: int = Field(ge=0)
+    players: list[PlayerCombatSummary]
+
+    @model_validator(mode="after")
+    def check_roster(self) -> FightCombatData:
+        ids = [player.actor_id for player in self.players]
+        if self.player_count != len(ids) or len(set(ids)) != len(ids):
+            raise ValueError("player_count must match a unique player roster")
+        return self
 
 
 # =============================================================================
@@ -230,3 +287,46 @@ class FullAnalysisResponse(BaseModel):
     fight: FightSummary
     analysis: AnalysisResult
     coach_report: CoachReport
+
+
+class DemoSnapshot(BaseModel):
+    """One consistent, explicitly synthetic analysis and combat-data snapshot."""
+
+    schema_version: Literal[1] = 1
+    data_origin: Literal["fixture"] = "fixture"
+    saved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    analysis: FullAnalysisResponse
+    combat_data: FightCombatData
+
+    @model_validator(mode="after")
+    def check_consistency(self) -> DemoSnapshot:
+        result = self.analysis
+        combat = self.combat_data
+        report = result.report
+        if not result.demo or report.code != "demo":
+            raise ValueError("Only the explicitly marked demo report can be saved here")
+        if result.fight not in report.fights or result.analysis.fight != result.fight:
+            raise ValueError("Analysis fight must belong to the snapshot report")
+        if combat.fight_id != result.fight.id:
+            raise ValueError("Combat data must belong to the analyzed fight")
+        if combat.duration_seconds != result.fight.duration_seconds:
+            raise ValueError("Combat duration must match the fight")
+        roster = {actor.id: actor for actor in report.actors if actor.type == "Player"}
+        if set(roster) != {player.actor_id for player in combat.players}:
+            raise ValueError("Combat players must match the report player roster")
+        deaths = Counter(death.player_id for death in result.analysis.deaths)
+        if result.analysis.total_deaths != len(result.analysis.deaths):
+            raise ValueError("Analysis death count must match death events")
+        if set(deaths) - set(roster):
+            raise ValueError("Death events must reference known players")
+        for player in combat.players:
+            if player.name != roster[player.actor_id].name:
+                raise ValueError("Combat player names must match the report roster")
+            if player.deaths != deaths[player.actor_id]:
+                raise ValueError("Combat deaths must match the analyzed death events")
+        return self
+
+
+class StoredDemoSnapshot(DemoSnapshot):
+    storage: Literal["database"] = "database"
+    database_engine: Literal["postgresql", "sqlite"]
